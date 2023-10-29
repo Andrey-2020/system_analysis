@@ -1,0 +1,34 @@
+@startuml
+!include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master/C4_Container.puml
+
+skinparam wrapWidth 300
+LAYOUT_WITH_LEGEND()
+LAYOUT_LANDSCAPE()
+
+title
+  <h1>Система, автоматизирующая процесс организации и проведения стажировок.</h1>
+  <i>Система обратной связи: публикация</i>
+end title
+
+
+Person(User, "Пользователь")
+System_Ext(auth, "Корпоративная система авторизации", "Регистрация стажеров и доступ всех участников системы в ЛК")
+Rel(User, auth, "Авторизация/аутентификация", "Внешний REST API")
+System_Boundary(software_system, "Web-система стажировки", "Сайт по SPA") {
+Container(news, "Сайт с анонсами")
+Container(form, "Система для откликов на стажировки")
+Container(recruitment, "Система для набора стажеров")
+Container(homeworks, "Система для ДЗ")
+SystemQueue_Ext(response_queue, "Kafka", Информация для СБ")
+Rel(recruitment, response_queue, "Потребляет", "kafka")
+}
+Rel(auth, software_system, "внутренний REST API")
+
+System_Ext(SB, "Служба безопасности")
+System_Ext(HR, "Служба HR")
+System_Ext(AD, "БД аккаунтов", "Интеграция с Active Directory")
+
+Rel(response_queue, SB, "Связь через кафку")
+Rel(software_system, HR, "Отправка информации о стажере через SOAP")
+Rel(software_system, AD, "")
+@enduml

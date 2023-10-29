@@ -1,0 +1,61 @@
+@startuml
+
+!pragma layout smetana
+
+' sid - security identifier - user id, который генерит ActiveDirectory (могу ошибаться).
+
+entity courses {
+    id : int <<PK>>
+    --
+    sid : varchar
+    created_at : timestamp
+    started_at : timestamp
+}
+
+entity announcements {
+    id : int <<PK>>
+    --
+    course_id : int <<FK>>
+    text : varchar
+}
+
+' Таблица, в которой хранится связь ментор-курс, чтобы выводить список менторов, закрепленных за курсом
+' У одного курса несколько менторов, у одного ментора несколько курсов
+
+entity course_mentors {
+    id : int <<PK>>
+    --
+    sid : varchar
+    course_id : int <<FK>>
+}
+
+entity lectures {
+    id : int <<PK>>
+    --
+    course_id : int <<FK>>
+    ---
+    lecture_text : varchar
+    video_record_link : varchar
+    presentation_link : varchar
+    homework_text : varchar
+}
+
+courses |o...o{ announcements : course_id
+courses |o...o{ course_mentors : course_id
+courses |o...o{ lectures : course_id
+
+' Таблица с готовыми домашками интернов, связанная с конкретной лекцией. Когда домашка интерна готова, она инсертится
+' в эту таблицу, и ее может оценить ментор.
+entity homeworks {
+    id : int <<PK>>
+    --
+    lecture_id : int <<FK>>
+    sid : varchar
+    --
+    text : varchar
+    assessment : varchar
+}
+
+homeworks }o...o{ lectures : lecture_id
+
+@enduml
