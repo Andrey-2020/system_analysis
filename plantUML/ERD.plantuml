@@ -5,41 +5,34 @@
 
 entity form {
     id : int <<PK>>
-    intern_id : int <<PK>>
     --
     courses_id : int <<FK>>
-    sid : varchar
+    owner_id: varchar
     created_at : timestamp
 }
 
-entity formQuestion {
+entity questions {
     id : int <<PK>>
     --
     form_id : int <<FK>>
-    text : varchar
+    questions_text : varchar
     created_at : timestamp
 }
 
-entity form_answerIntern {
-    id : int <<PK>>
-    --
-    form_id : int <<FK>>
-    intern_id : int <<FK>>
-}
 
-entity answerIntern {
+entity answers {
     id : int <<PK>>
     --
-    intern_id : int <<FK>>
+    questions _id : int <<FK>>
+    intern_email : varchar
     created_at : timestamp
     --
-    text : varchar
+    answers_text : varchar
     assessment : varchar
 }
 
-form |o...o{ formQuestion : form_id
-form |o...o{ form_answerIntern : form_id, intern_id
-form_answerIntern |o...o{ answerIntern : form_answerIntern_id
+form ||...o{ questions : form_id
+questions ||...o{ answers : form_id
 
 entity courses {
     id : int <<PK>>
@@ -82,7 +75,7 @@ entity lectures {
     presentation_link : varchar
     homework_text : varchar
 }
-form }o...o| courses : courses_id
+form |o...o| courses : courses_id
 courses |o...o{ announcements : course_id
 courses |o...o{ course_mentors : course_id
 courses |o...o{ course_intern : course_id
@@ -97,18 +90,9 @@ entity homeworks {
     mentor_id: int <<FK>>
     sid : varchar
     --
-    text : varchar
+    homework_text: varchar
     assessment : varchar
 }
 
-entity lectures_homeworks {
-    id : int <<PK>>
-    --
-    lecture_id : int <<FK>>
-    homework_id: int <<FK>>
-    sid : varchar
-}
-
-lectures |o...o{ lectures_homeworks : lecture_id
-lectures_homeworks }o...o| homeworks : lecture_id
+lectures |o...o{ homeworks : lecture_id
 @enduml
