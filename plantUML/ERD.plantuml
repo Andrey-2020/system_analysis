@@ -1,8 +1,45 @@
 @startuml
-
 !pragma layout smetana
 
 ' sid - security identifier - user id, который генерит ActiveDirectory (могу ошибаться).
+
+entity form {
+    id : int <<PK>>
+    intern_id : int <<PK>>
+    --
+    courses_id : int <<FK>>
+    sid : varchar
+    created_at : timestamp
+}
+
+entity formQuestion {
+    id : int <<PK>>
+    --
+    form_id : int <<FK>>
+    text : varchar
+    created_at : timestamp
+}
+
+entity form_answerIntern {
+    id : int <<PK>>
+    --
+    form_id : int <<FK>>
+    intern_id : int <<FK>>
+}
+
+entity answerIntern {
+    id : int <<PK>>
+    --
+    intern_id : int <<FK>>
+    created_at : timestamp
+    --
+    text : varchar
+    assessment : varchar
+}
+
+form |o...o{ formQuestion : form_id
+form |o...o{ form_answerIntern : form_id, intern_id
+form_answerIntern |o...o{ answerIntern : form_answerIntern_id
 
 entity courses {
     id : int <<PK>>
@@ -21,6 +58,12 @@ entity announcements {
 
 ' Таблица, в которой хранится связь ментор-курс, чтобы выводить список менторов, закрепленных за курсом
 ' У одного курса несколько менторов, у одного ментора несколько курсов
+entity course_intern {
+    id : int <<PK>>
+    --
+    sid : varchar
+    course_id : int <<FK>>
+}
 
 entity course_mentors {
     id : int <<PK>>
@@ -39,9 +82,10 @@ entity lectures {
     presentation_link : varchar
     homework_text : varchar
 }
-
+form }o...o| courses : courses_id
 courses |o...o{ announcements : course_id
 courses |o...o{ course_mentors : course_id
+courses |o...o{ course_intern : course_id
 courses |o...o{ lectures : course_id
 
 ' Таблица с готовыми домашками интернов, связанная с конкретной лекцией. Когда домашка интерна готова, она инсертится
@@ -50,12 +94,21 @@ entity homeworks {
     id : int <<PK>>
     --
     lecture_id : int <<FK>>
+    mentor_id: int <<FK>>
     sid : varchar
     --
     text : varchar
     assessment : varchar
 }
 
-homeworks }o...o{ lectures : lecture_id
+entity lectures_homeworks {
+    id : int <<PK>>
+    --
+    lecture_id : int <<FK>>
+    homework_id: int <<FK>>
+    sid : varchar
+}
 
+lectures |o...o{ lectures_homeworks : lecture_id
+lectures_homeworks }o...o| homeworks : lecture_id
 @enduml
