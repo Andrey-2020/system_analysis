@@ -141,7 +141,7 @@
 
 Приведенная ниже диаграмма BPMN иллюстрирует процесс подачи и рассмотрения заявки на стажировку (UC-1):
 
-https://drive.google.com/file/d/1mqnltakp25wUW1iSAvBpUg-schCGtYlr/view?usp=sharing
+![BPMN](images/bpmn-applying-internship-workflow.png "BPMN")
 #### Описание
 Стажер заполняет анкету, и эти данные сначала попадают к руководителю стажировки. Руководитель стажировки оценивает информацию о кандидате, выполненное домашнее задание и принимает решение в рамках системы – нажимает кнопку “подходит” кандидат или “отклонить”, после чего эти данные передаются администратору стажировки. 
 
@@ -151,7 +151,7 @@ https://drive.google.com/file/d/1mqnltakp25wUW1iSAvBpUg-schCGtYlr/view?usp=shari
 ### Процесс проведения обучения
 На следующей диаграмме BPMN иллюстрирует процесс создания, проверки ДЗ (UC-3, UC-6):
 
-https://drive.google.com/file/d/1qKia4nmVxm-dSxb3KgCA7aYd_KYsnE2P/view?usp=sharing
+![BPMN](images/homework.jpg "BPMN-HW")
 
 #### Описание:
 
@@ -170,15 +170,17 @@ https://drive.google.com/file/d/1qKia4nmVxm-dSxb3KgCA7aYd_KYsnE2P/view?usp=shari
 ### Диаграмма вариантов использования
 На следующей диаграмме показано сопоставление функциональных требований к акторам:
 
-https://drive.google.com/file/d/1gBLlgf41UO-lxfF_2cQt_tiovJ_xzwmD/view?usp=sharing
+![Use Case Model](images/use-case.jpg "Use Case Model")
 
 
 ### Диаграмма системного контекста
 
 На приведенной ниже диаграмме системного контекста изображены ключевые пользователи системы и ее внешние зависимости:
 
-https://drive.google.com/file/d/1bHIrqNQ40YD1lt0EpbjIrAyijjs3yBMQ/view?usp=sharing
+![C4 in PlantUML](http://www.plantuml.com/plantuml/png/TLHXJy9M5FtUN_769qYKccoVZ35M8TECAGEDsITIu3aQQCjUNyVCiaJ4kIqpSoucMroopNyWEXo2XR_m-ezshaL7RKX4sdVlFUVUyyvbmvEcaBxTqZwmd5hBhtFMaBBjhUgwC3lPBopPyAk-nqNDTIHtPBRcsdgxPJfKi-p9UikgwbiVBHVfwE3JWcwRdkG2HvKjL9YMmqMsJVYQrxISjYbCctM4sJwqwhB1FbnPqGh6vti7-vN3dVtjIY7_SNutbywy7XQCtLnvooZcSQH9IxQunjXQTLtTgc7O3K_LG3shkoMcxjGztYRqXk-X-XVnax0N_Xp-Y9DBfgRXYPg4vsg0iYvJ4xm-e2gWN6ISutl8y1SbgdiW_uCFugWcAYG_4YW5yHbbr_JgEdLZlUk68Tf77ZKIuFa9vUZkadfQ9VoUwgin-4R4I_XhkhMkSQVEeWarhSY5vphf0-Y-n5BgBw2Cmmi043VX3kWzbT7Anr3RhkI_bcdJbmrAlg7Pr9J-HrgW9C0JJH5lCz8CUVCQf0ZZRwGyHCc88X9NOH2fG791f0cTOwWf0ruNmUyOXFyUPPHF0eyeEqOV_iIe_WzrWo5Al3KRzNM6NnATWL_7Gu_ALK1ZXMVp4gQex5SLWFu7ueJgfNnvdnd5dVzbsdHzfswAuxJd7icEANZ5UmcWzf1Nb-Fw92zzD5Fd5gTFuIaZaLcvQAGox1ljpUrfXtUy-JIo6nbjWhwxU7e6J6Ok_yWLDlBZ9Y9Xn-JR2Kv6aLqYpOC5hSKm1Qy9tv8sDdOnD91KF_99ucvZQ0tNvXrNDBt5MDVgjpUTF_EvpryyARZNTXsFLxwa8rH_OXurJOYeVeSOPyHDA3D_pR30S1Mv8Zv60epsWWog1XW3bUZzb2weIIH0-9OmPdkHl75Q2_WfgW-IdfdVhV9cDFaODdy46URkeuhsSKe-Lq6q1MeOtydjqlkwxL8ymyXHnfMw9e-CoCz89N_J7L28X2An7sABo8oQjBxYB6T18kcAOw3Ij0d5Pvr7lp_X1SDUqWsZTqPak8DHs9kfdT0eQlzFy4-9dNn6em_VtvqQmgTn2mtccSfxHd4Hnui026vmf-xRhVy0)
 
+Код диаграммы в формате plantUML:
+[ERD](plantUML/C4.plantuml)
 
 ### ER-модель
 
@@ -186,5 +188,5 @@ https://drive.google.com/file/d/1bHIrqNQ40YD1lt0EpbjIrAyijjs3yBMQ/view?usp=shari
 
 ![ERD in PlantUML](http://www.plantuml.com/plantuml/svg/jLPTJXin47xVKqoVsaea1uWGeb9LgUfBUuALjJ5bHNONURrG14Zv4IrIKl7Un_O28P0IGf9UONoZZXqPlCGDKVeZLOjdlfblxFq-RxPpoOGiaaRmR5-mZmc31ZlA2WbvmYLBMH0yXpokGmLo7XKYbaSGrtaguvsO2ueMEHSKsG0SuqorwNzJTV4My0g7ECMXQk98jU5L9EC3_ZeMF9APE88NEC4PNgaEKCKvZl0I-wgjUggbBbvMWu0ODDLE9X8u3e3-qGmrY5C9cvlltsrjcHWjkKX3NwfICOyeAqJESnVona9o4pnW8jfbOeuMd4bU3vcaX8mJJeUJx0UdfNa-51IEizIToq-kqLvcoJ_9TQX3bkQ7NBpLsrwNttzkEkMGhSopfDsoRTbY_rcmd5uPwIzr4pISKSD9LgrMi-FogwZPlIvYt3DpW1iFKmUBCDl0Ksk1jjgUcPNQqyUrikuCcEovL1SiJRCYZRW-BZ-vnn2hgF9KMn-_Ov-yUKSc_enzSld0CJhEoEZgJ3K9CzKsr-u5rSA1ki0RrGESw4jW3gxWM7LKKxKsG7tH8RnKNI1e5mUqk3RrFLtzY_viKMXSggV0WFXlY6jCgo71xdIMybrrPX9WAGWxqSF_0DDvggyQd3sa2QclffRU2jwfddvwo5IdNEyYl3tS0GPbNOHpkQsb3jF0xrQNGIiW4_b_eMZmI1Q2_vt0AdE8RHPwh7yGrtaM2XvbeXusudJlKNwVPg2Hc7QzBx-R9Vmm4tlXWfZDnN1gV7roxzMQyu48RD2Ql-mi2_KWoozW5QXLmpAaFN8Nj6X9CWpWrToHnamJ705UQmTWNvtZcC0cDDBADT_ZwLpTrgV6l5C2Q-iQTzFAM8pmK-DnuxGnqOteULi5_AOTGIpzHrHbchupcRaygBF5j3H6jUsjeVSr0FMLLXsWyFqELOVgHa2yGp2_6NxgkQWLJKDcDFNbYwPgDMkri89ehI9zgfs_LKej_m6nnZVDuw_m7mrjspmzDirWoQtqVDFK7Bh0axVE-aF5Da_hHTBu3G00)
 
-Код в plantUML:
-
+Код в формате plantUML:
+[ERD](plantUML/ERD.plantuml)
