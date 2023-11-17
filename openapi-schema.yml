@@ -1,6 +1,8 @@
 openapi: 3.0.0
+x-stoplight:
+  id: qayq6uwh5oi0j
 info:
-  title: 'Internship system'
+  title: Traineeship system
   version: 1.0.0
 paths:
   /api/users/:
@@ -21,46 +23,30 @@ paths:
           description: Количество объектов на странице.
           schema:
             type: integer
+        - name: author
+          required: false
+          in: query
+          description: Показывать пользователей с указанным ФИО
+          schema:
+            type: string
       security:
-        - Token: [ ]
+        - Token: []
       responses:
         '200':
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  count:
-                    type: integer
-                    example: 123
-                    description: 'Общее количество объектов в базе'
-                  next:
-                    type: string
-                    nullable: true
-                    format: uri
-                    example: http://internship.example.org/api/users/?page=4
-                    description: 'Ссылка на следующую страницу'
-                  previous:
-                    type: string
-                    nullable: true
-                    format: uri
-                    example: http://internship.example.org/api/users/?page=2
-                    description: 'Ссылка на предыдущую страницу'
-                  results:
-                    type: array
-                    items:
-                      $ref: '#/components/schemas/UserSearch'
-                    description: 'Список объектов текущей страницы'
+                $ref: '#/components/schemas/UserAD'
           description: Список пользователей
       tags:
         - Пользователи
     post:
-      summary: Регистрация кандидата в системе 
+      summary: Регистрация кандидата в системе
       operationId: Регистрация пользователя
-      description: Администратор регистрирует кандидата в системе 
+      description: Администратор регистрирует кандидата в системе.
       parameters: []
       security:
-        - Token: [ ]
+        - Token: []
       requestBody:
         content:
           application/json:
@@ -71,10 +57,12 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/CustomUserResponseOnCreate'
-          description: 'Пользователь успешно создан'
+                $ref: '#/components/schemas/CustomUserCreate'
+          description: Пользователь успешно создан
         '400':
           $ref: '#/components/responses/ValidationError'
+        '403':
+          $ref: '#/components/responses/PermissionDenied'
       tags:
         - Пользователи
   /api/users/me/:
@@ -84,7 +72,7 @@ paths:
       description: Получение профиля текущего пользователя для отображения на странице
       parameters: []
       security:
-        - Token: [ ]
+        - Token: []
       responses:
         '200':
           content:
@@ -96,18 +84,140 @@ paths:
           $ref: '#/components/responses/AuthenticationError'
       tags:
         - Пользователи
-  /api/users/{id}/:
+  /api/users/candidates/:
     get:
-      summary: Получение профиля
-      operationId: Профиль пользователя
-      description: 'Получение профиля пользователя по id. Доступно только авторизованным пользователям'
+      summary: Список кандидатов на стажировку
+      operationId: Все кандидаты
+      description: 'Получение списка кандидатов на стажировку, отфильтрованного по id стажировки. Доступен ментору и администратору.'
+      parameters:
+        - name: page
+          required: false
+          in: query
+          description: Номер страницы.
+          schema:
+            type: integer
+        - name: limit
+          required: false
+          in: query
+          description: Количество объектов на странице.
+          schema:
+            type: integer
+        - name: traineeship_id
+          required: true
+          in: query
+          description: Уникальный идентификатор стажировки. Нужен для фильтрации.
+          schema:
+            type: string
       security:
-        - Token: [ ]
+        - Token: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FormsDecisionsList'
+              examples:
+                Example 1:
+                  value:
+                    count: 100
+                    next: 'http://internship.example.org/api/users/candidates/?page=4'
+                    previous: 'http://internship.example.org/api/users/candidates/?page=2'
+                    results:
+                      - info:
+                          id: 0
+                          username: '79000000000'
+                          first_name: Вася
+                          last_name: Пупкин
+                          middle_name: Алибабаевич
+                          address: string
+                          birthday: '2009-06-06'
+                          email: user@example.com
+                        tasks:
+                          - id: 0
+                            username: string
+                            traineeship_id: 0
+                            questios_id: 0
+                            answer_text/link: 'https://docs.google.com/document/u/0/'
+                        status_from_supervisor:
+                          status: Нет статуса. Кандидата не проверял руководитель стажировки
+                          description: None
+                        status_from_SS:
+                          status: Нет статуса. Кандидат не отправлялся в СБ
+                          description: None
+          description: ''
+        '401':
+          $ref: '#/components/responses/AuthenticationError'
+      tags:
+        - Пользователи
+  '/api/users/candidates/{id}/':
+    patch:
+      summary: Список кандидатов на стажировку
+      operationId: Добавить статус от руководителя стажировки
+      description: Доблавление кандидату с id статуса от руководителя стажировки по итогам проверки вступительного задания и ознакомления информации о кандидате.
       parameters:
         - name: id
           in: path
           required: true
-          description: "Уникальный id этого пользователя"
+          description: Уникальный идентификатор стажера.
+          schema:
+            type: string
+      security:
+        - Token: []
+      requestBody:
+        content:
+          application/json:
+            schema:
+              allOf:
+                - $ref: '#/components/schemas/FormsDecisionsUpdate'
+            examples: {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/FormsDecisions'
+              examples:
+                Example 1:
+                  value:
+                    info:
+                      id: 0
+                      username: '79000000000'
+                      first_name: Вася
+                      last_name: Пупкин
+                      middle_name: Алибабаевич
+                      address: string
+                      birthday: '2009-06-06'
+                      email: user@example.com
+                    tasks:
+                      - id: 0
+                        username: string
+                        traineeship_id: 0
+                        questios_id: 0
+                        answer_text/link: 'https://docs.google.com/document/u/0/'
+                    status_from_supervisor:
+                      status: Одобрено
+                      description: string
+                    status_from_SS:
+                      status: Нет статуса. Кандидат не отправлялся в СБ
+                      description: None
+          description: ''
+        '401':
+          $ref: '#/components/responses/AuthenticationError'
+      tags:
+        - Пользователи
+  '/api/users/{id}/':
+    get:
+      summary: Получение профиля
+      operationId: Профиль пользователя
+      description: Получение профиля пользователя по id. Доступно только авторизованным пользователям
+      security:
+        - Token: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Уникальный id этого пользователя
           schema:
             type: string
       responses:
@@ -117,25 +227,24 @@ paths:
               schema:
                 $ref: '#/components/schemas/User'
           description: ''
-        '404':
-          $ref: '#/components/responses/NotFound'
         '401':
           $ref: '#/components/responses/AuthenticationError'
+        '404':
+          $ref: '#/components/responses/NotFound'
       tags:
         - Пользователи
-
-  /api/users/{id}/role/:
+  '/api/users/{id}/role/':
     post:
       summary: Добавить пользователю роль
       operationId: Роль
-      description: 'Доступно только руководителю стажировки и администратору. Администратор назначает руководителя стажировки. Руководитель стажировки назначает стажеров и менторов на свою стажировку'
+      description: Доступно только руководителю стажировки и администратору. Администратор назначает руководителя стажировки. Руководитель стажировки назначает стажеров и менторов на свою стажировку
       security:
-        - Token: [ ]
+        - Token: []
       parameters:
         - name: id
           in: path
           required: true
-          description: "Уникальный идентификатор этого пользователя."
+          description: Уникальный идентификатор этого пользователя.
           schema:
             type: string
       requestBody:
@@ -144,13 +253,17 @@ paths:
             schema:
               type: object
               properties:
-                internship_id:
+                traineeship_id:
                   type: integer
                 role:
                   type: string
-                  description: "Роль пользователя"
-                  example: "Стажер"
-                  enum: ["Стажер", "Ментор", "Руководитель стажировки", "Администратор"]
+                  description: Роль пользователя
+                  example: Стажер
+                  enum:
+                    - Стажер
+                    - Ментор
+                    - Руководитель стажировки
+                    - Администратор
               required:
                 - username
       responses:
@@ -159,7 +272,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/User'
-          description: 'Подписка успешно создана'
+          description: Подписка успешно создана
         '400':
           description: 'Ошибка назначения роли (Например, если роль уже назначена)'
           content:
@@ -168,23 +281,24 @@ paths:
                 $ref: '#/components/schemas/SelfMadeError'
         '401':
           $ref: '#/components/responses/AuthenticationError'
+        '403':
+          $ref: '#/components/responses/PermissionDenied'
         '404':
           $ref: '#/components/responses/NotFound'
       tags:
         - Управление стажерами и менторами
-
-  /api/users/{id}/matching/:
+  '/api/users/{id}/matching/':
     post:
       summary: Назначить стажера под конкретного ментора
       operationId: Назначить стажеру ментора
-      description: 'Доступно только руководителю стажировки'
+      description: Доступно только руководителю стажировки
       security:
-        - Token: [ ]
+        - Token: []
       parameters:
         - name: id
           in: path
           required: true
-          description: "Уникальный идентификатор стажера."
+          description: Уникальный идентификатор стажера.
           schema:
             type: string
       requestBody:
@@ -198,7 +312,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Intern'
-          description: 'Подписка успешно создана'
+          description: Подписка успешно создана
         '400':
           description: 'Ошибка назначения ментора (Например, если стажеру для данной стажировки уже назначен ментор)'
           content:
@@ -207,21 +321,32 @@ paths:
                 $ref: '#/components/schemas/SelfMadeError'
         '401':
           $ref: '#/components/responses/AuthenticationError'
+        '403':
+          $ref: '#/components/responses/PermissionDenied'
         '404':
           $ref: '#/components/responses/NotFound'
       tags:
         - Управление стажерами и менторами
-
-  /api/announcements/projects/:
+  /api/projects/:
     get:
-      summary: Все шаблоны лендингов
+      summary: 'Все шаблоны лендингов, форм и программ стажировок'
       operationId: Конструктор
-      description: Получить шаблоны лендингов
+      description: Получить шаблоны лендингов. Доступно только администратору.
       security:
         - Token:
-          - admin
-        - Token: [ ]
+            - admin
+        - Token: []
       parameters:
+        - name: purpose
+          required: false
+          in: query
+          description: Количество объектов на странице.
+          schema:
+            type: string
+            enum:
+              - Только форма
+              - Анонс
+              - Программа стажировки
         - name: addnewpage
           required: false
           in: query
@@ -247,26 +372,38 @@ paths:
               schema:
                 $ref: '#/components/schemas/Templates'
           description: Все шаблоны страницы
-        '404':
-          $ref: '#/components/responses/NotFound'
         '401':
           $ref: '#/components/responses/AuthenticationError'
+        '403':
+          $ref: '#/components/responses/PermissionDenied'
+        '404':
+          $ref: '#/components/responses/NotFound'
       tags:
-        - Анонсы
-  /api/announcements/projects/{projectid}/:
+        - Конструктор
+  '/api/projects/{projectid}/':
     get:
-      summary: Получить шаблон страницы
+      summary: Получить шаблон проекта
       operationId: Шаблон проекта
-      description: Получить шаблоны проекта
+      description: Получить шаблон проекта
       security:
         - Token:
-          - admin
-        - Token: [ ]
+            - admin
+        - Token: []
       parameters:
+        - name: purpose
+          required: true
+          in: query
+          description: 'Цель использования конструктора. Создание формы, анонса или программы стажировки?'
+          schema:
+            type: string
+            enum:
+              - Только форма
+              - Анонс
+              - Программа стажировки
         - name: projectid
           in: path
           required: true
-          description: "Уникальный индентификатор проекта"
+          description: Уникальный индентификатор проекта
           schema:
             type: integer
         - name: addnewpage
@@ -281,48 +418,68 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Template'
-          description: Сообщение содержит HTML-разметку, а также необходимые библиотеки CSS-стилей и библиотеки JS-модулей.
-        '404':
-          $ref: '#/components/responses/NotFound'
+          description: 'Сообщение содержит HTML-разметку, а также необходимые библиотеки CSS-стилей и библиотеки JS-модулей.'
         '401':
           $ref: '#/components/responses/AuthenticationError'
+        '404':
+          $ref: '#/components/responses/NotFound'
       tags:
-        - Анонсы
+        - Конструктор
     post:
-      summary: "Создать лендинг"
+      summary: 'Создать анонс, форму или программу стажировки'
       operationId: Создать анонс стажировки
-      description: "Создать анонс стажировки в конструкторе"
+      description: Создать анонс стажировки в конструкторе
       security:
         - Token:
-          - admin
+            - admin
       parameters:
+        - name: purpose
+          required: true
+          in: query
+          description: 'Цель использования конструктора. Создание формы, анонса или программы стажировки?'
+          schema:
+            type: string
+            enum:
+              - Только форма
+              - Анонс
+              - Программа стажировки
         - name: projectid
           in: path
           required: true
-          description: "Уникальный индентификатор проекта"
+          description: Уникальный индентификатор проекта
           schema:
             type: integer
       requestBody:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/AnnouncementsCreate'
+              $ref: '#/components/schemas/ProjectsCreate'
       responses:
         '201':
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/AnnouncementsResponseOnCreate'
-          description: 'Анонс о стажировке успешно создан'
+          description: ' Анонс стажировки успешно создан. Данный пример показывает ответ на запрос с параметром purpose = "Анонс". В сообщении содержится ссылка на лендинг.'
         '400':
-          $ref: '#/components/responses/AnnouncementsValidationError'
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ValidationError'
+                example:
+                  block:
+                    - Блок "form" с id "668483038" содержит недопустимые значения
+          description: Невозможно обработать запрос
         '401':
           $ref: '#/components/responses/AuthenticationError'
+        '403':
+          $ref: '#/components/responses/PermissionDenied'
         '404':
           $ref: '#/components/responses/NotFound'
       tags:
-        - Анонсы
-  /api/announcements/{id}/:
+        - Конструктор
+  '/api/announcements/{id}/':
     get:
       summary: Получение страницы анонса стажировки
       operationId: Получение лендинга
@@ -331,7 +488,7 @@ paths:
         - name: id
           in: path
           required: true
-          description: "Уникальный идентификатор анонса"
+          description: Уникальный идентификатор анонса
           schema:
             type: string
       responses:
@@ -346,14 +503,14 @@ paths:
       tags:
         - Анонсы
     post:
-      summary: "Отправка заявки на стажировку"
+      summary: Отправка заявки на стажировку
       operationId: Отклик
-      description: "Отклик на стажировку путем заполнения и отправки формы на сайте"
+      description: Отклик на стажировку путем заполнения и отправки формы на сайте
       parameters:
         - name: id
           in: path
           required: true
-          description: "Уникальный идентификатор анонса"
+          description: Уникальный идентификатор анонса
           schema:
             type: string
       requestBody:
@@ -372,29 +529,35 @@ paths:
                 properties:
                   username:
                     type: string
-                    description: "Уникальный юзернейм"
-                    pattern: ^[\w.@+-]+\z
+                    description: Уникальный юзернейм
+                    pattern: '^(7+([0-9]){10})$'
                     maxLength: 150
-                    example: "79000000000"
+                    example: '79000000000'
                   message:
                     type: string
-                    description: "Уведомление"
-                    example: "Ваш отклик успешно зарегистрирован"
-          description: 'Отклик успешно отправлен'
+                    description: Уведомление
+                    example: Ваш отклик успешно зарегистрирован
+          description: Отклик успешно отправлен
         '400':
           $ref: '#/components/responses/ValidationError'
         '409':
           $ref: '#/components/responses/ConflictError'
       tags:
         - Анонсы
-
-  /api/lectures/:
+  '/api/traineeships/{traineeship_id}/lectures/':
     get:
+      summary: Получить все лекции
+      operationId: Список лекций
+      description: 'Список всех лекций для конкретной стажировки. Доступно стажеру, ментору, руководителю стажировки. Стажер по атрибуду date_lecture может узнать когда следующая лекция.'
       security:
         - Token: []
-      operationId: Список лекций
-      description: Страница доступна всем авторизированным пользователям.
       parameters:
+        - name: traineeship_id
+          in: path
+          required: true
+          description: Уникальный идентификатор стажировки
+          schema:
+            type: string
         - name: page
           required: false
           in: query
@@ -407,106 +570,82 @@ paths:
           description: Количество объектов на странице.
           schema:
             type: integer
-        - name: is_favorited
-          required: false
-          in: query
-          description: Показывать только рецепты, находящиеся в списке избранного.
-          schema:
-            type: integer
-            enum: [0, 1]
-        - name: is_in_shopping_cart
-          required: false
-          in: query
-          description: Показывать только рецепты, находящиеся в списке покупок.
-          schema:
-            type: integer
-            enum: [0, 1]
-        - name: author
-          required: false
-          in: query
-          description: Показывать рецепты только автора с указанным id.
-          schema:
-            type: integer
-        - name: tags
-          required: false
-          in: query
-          description: Показывать рецепты только с указанными тегами (по slug)
-          example: 'lunch&tags=breakfast'
-
-          schema:
-            type: array
-            items:
-              type: string
       responses:
         '200':
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  count:
-                    type: integer
-                    example: 123
-                    description: 'Общее количество объектов в базе'
-                  next:
-                    type: string
-                    nullable: true
-                    format: uri
-                    example: http://foodgram.example.org/api/recipes/?page=4
-                    description: 'Ссылка на следующую страницу'
-                  previous:
-                    type: string
-                    nullable: true
-                    format: uri
-                    example: http://foodgram.example.org/api/recipes/?page=2
-                    description: 'Ссылка на предыдущую страницу'
-                  results:
-                    type: array
-                    items:
-                      $ref: '#/components/schemas/RecipeList'
-                    description: 'Список объектов текущей страницы'
-          description: ''
+                $ref: '#/components/schemas/LecturesList'
+          description: Список лекций
+        '404':
+          $ref: '#/components/responses/NotFound'
       tags:
         - Лекции
     post:
+      summary: Создать новую лекцию
+      operationId: Создание лекции
+      description: Создание лекций доступно только руководителю стажировки. Дополнить её информацией может и ментор.
       security:
         - Token: []
-      operationId: Создание лекции
-      description: 'Доступно только руководителю стажировки'
-      parameters: []
+      parameters:
+        - name: traineeship_id
+          in: path
+          required: true
+          description: Уникальный идентификатор стажировки
+          schema:
+            type: string
       requestBody:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/RecipeCreateUpdate'
+              $ref: '#/components/schemas/LecturesCreate'
       responses:
         '201':
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/RecipeList'
-          description: 'Рецепт успешно создан'
+                $ref: '#/components/schemas/LecturesMinified'
+          description: Рецепт успешно создан
         '400':
-          description: 'Ошибки валидации в стандартном формате DRF'
+          description: Ошибки валидации в стандартном формате DRF
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ValidationError'
+                allOf:
+                  - $ref: '#/components/schemas/ValidationError'
+                example:
+                  name:
+                    - Обязательное поле.
         '401':
-          $ref: '#/components/schemas/AuthenticationError'
+          description: ''
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthenticationError'
+        '403':
+          $ref: '#/components/responses/PermissionDenied'
         '404':
           $ref: '#/components/responses/NotFound'
       tags:
         - Лекции
-  /api/lectures/{id}/:
+  '/api/traineeships/{traineeship_id}/lectures/{lecture_id}/':
     get:
+      summary: Зайти в карточку лекции
       operationId: Получение лекции
-      description: ''
+      description: 'Перейти в карточку лекции для просмотра материалов. Доступно стажеру, ментору, руководителю стажировки, администратору.'
+      security:
+        - Token: []
       parameters:
-        - name: id
+        - name: traineeship_id
           in: path
           required: true
-          description: "Уникальный идентификатор лекции"
+          description: Уникальный идентификатор стажировки
+          schema:
+            type: string
+        - name: lecture_id
+          in: path
+          required: true
+          description: Уникальный идентификатор лекции
           schema:
             type: string
       responses:
@@ -514,36 +653,53 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/RecipeList'
+                $ref: '#/components/schemas/Lectures'
           description: ''
+        '404':
+          $ref: '#/components/responses/NotFound'
       tags:
         - Лекции
     patch:
+      summary: Обновить информацию в лекции
       operationId: Обновление лекции
       security:
-        - Token: [ ]
-      description: 'Добавление материалов лекции. Доступно только руководителю стажировки и ментору'
+        - Token: []
+      description: Обновление/Добавление материалов лекции. Доступно только руководителю стажировки и ментору
       parameters:
-        - name: id
+        - name: traineeship_id
           in: path
           required: true
-          description: "Уникальный идентификатор этого рецепта."
+          description: Уникальный идентификатор стажировки
+          schema:
+            type: string
+        - name: lecture_id
+          in: path
+          required: true
+          description: Уникальный идентификатор лекции.
           schema:
             type: string
       requestBody:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/RecipeCreateUpdate'
+              $ref: '#/components/schemas/LecturesUpdate'
       responses:
         '200':
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/RecipeList'
-          description: 'Лекция успешно обновлена'
+                $ref: '#/components/schemas/Lectures'
+          description: Лекция успешно обновлена
         '400':
-          $ref: '#/components/responses/NestedValidationError'
+          description: Ошибки валидации в стандартном формате JSF.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ValidationError'
+                example:
+                  link_presentation:
+                    - Содержит некорректные данные.
         '401':
           $ref: '#/components/responses/AuthenticationError'
         '403':
@@ -552,318 +708,401 @@ paths:
           $ref: '#/components/responses/NotFound'
       tags:
         - Лекции
-    delete:
-      operationId: Удаление лекции
-
-      description: 'Доступно только руководителю стажировки'
-      security:
-        - Token: [ ]
-      parameters:
-        - name: id
-          in: path
-          required: true
-          description: "Уникальный идентификатор этого рецепта"
-          schema:
-            type: string
-      responses:
-        '204':
-          description: 'Рецепт успешно удален'
-        '401':
-          $ref: '#/components/responses/AuthenticationError'
-        '403':
-          $ref: '#/components/responses/PermissionDenied'
-        '404':
-          $ref: '#/components/responses/NotFound'
-      tags:
-        - Лекции
-
-  /api/homeworks/:
+  '/api/traineeships/{traineeship_id}/lectures/{lecture_id}/homeworks':
     get:
+      summary: Получить все домашние задания для данной лекции
+      operationId: Список ДЗ
+      description: 'Получить все задачи для определенной стажировки. Доступно стажерам, менторам, руководителю стажировки и администратору.'
       security:
-        - Token: [ ]
-      operationId: Скачать список покупок
-      description: 'Скачать файл со списком покупок. Это может быть TXT/PDF/CSV. Важно, чтобы контент файла удовлетворял требованиям задания. Доступно только авторизованным пользователям.'
-      parameters: []
-      responses:
-        '200':
-          description: ''
-          content:
-            application/pdf:
-              schema:
-                type: string
-                format: binary
-            text/plain:
-              schema:
-                type: string
-                format: binary
-        '401':
-          $ref: '#/components/responses/AuthenticationError'
-      tags:
-        - Домашние задания
-    post:
-      operationId: Добавить рецепт в список покупок
-      description: 'Доступно только авторизованным пользователям'
-      security:
-        - Token: [ ]
+        - Token: []
       parameters:
-        - name: id
+        - name: traineeship_id
           in: path
           required: true
-          description: "Уникальный идентификатор этого рецепта."
+          description: Уникальный идентификатор стажировки.
           schema:
             type: string
-      responses:
-        '201':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/RecipeMinified'
-          description: 'Рецепт успешно добавлен в список покупок'
-        '400':
-          description: 'Ошибка добавления в список покупок (Например, когда рецепт уже есть в списке покупок)'
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/SelfMadeError'
-        '401':
-          $ref: '#/components/responses/AuthenticationError'
-      tags:
-        - Домашние задания
-  /api/homeworks/{id}/:
-    get:
-      security:
-        - Token: [ ]
-      operationId: Скачать список покупок
-      description: 'Скачать файл со списком покупок. Это может быть TXT/PDF/CSV. Важно, чтобы контент файла удовлетворял требованиям задания. Доступно только авторизованным пользователям.'
-      parameters: []
-      responses:
-        '200':
-          description: ''
-          content:
-            application/pdf:
-              schema:
-                type: string
-                format: binary
-            text/plain:
-              schema:
-                type: string
-                format: binary
-        '401':
-          $ref: '#/components/responses/AuthenticationError'
-      tags:
-        - Домашние задания
-  /api/homeworks/{id}/decisions/:
-    get:
-      security:
-        - Token: [ ]
-      operationId: Скачать список покупок
-      description: 'Скачать файл со списком покупок. Это может быть TXT/PDF/CSV. Важно, чтобы контент файла удовлетворял требованиям задания. Доступно только авторизованным пользователям.'
-      parameters: []
-      responses:
-        '200':
-          description: ''
-          content:
-            application/pdf:
-              schema:
-                type: string
-                format: binary
-            text/plain:
-              schema:
-                type: string
-                format: binary
-        '401':
-          $ref: '#/components/responses/AuthenticationError'
-      tags:
-        - Домашние задания
-    post:
-      operationId: Добавить рецепт в список покупок
-      description: 'Доступно только авторизованным пользователям'
-      security:
-        - Token: [ ]
-      parameters:
-        - name: id
+        - name: lecture_id
           in: path
           required: true
-          description: "Уникальный идентификатор этого рецепта."
+          description: Уникальный идентификатор лекции.
           schema:
             type: string
-      responses:
-        '201':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/RecipeMinified'
-          description: 'Рецепт успешно добавлен в список покупок'
-        '400':
-          description: 'Ошибка добавления в список покупок (Например, когда рецепт уже есть в списке покупок)'
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/SelfMadeError'
-        '401':
-          $ref: '#/components/responses/AuthenticationError'
-      tags:
-        - Домашние задания
-  /api/homeworks/{id}/decisions/{id}/:
-    patch:
-      operationId: Обновление лекции
-      security:
-        - Token: [ ]
-      description: 'Добавление материалов лекции. Доступно только руководителю стажировки и ментору'
-      parameters:
-        - name: id
-          in: path
-          required: true
-          description: "Уникальный идентификатор этого рецепта."
-          schema:
-            type: string
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/RecipeCreateUpdate'
-      responses:
-        '200':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/RecipeList'
-          description: 'Лекция успешно обновлена'
-        '400':
-          $ref: '#/components/responses/NestedValidationError'
-        '401':
-          $ref: '#/components/responses/AuthenticationError'
-        '403':
-          $ref: '#/components/responses/PermissionDenied'
-        '404':
-          $ref: '#/components/responses/NotFound'
-      tags:
-        - Домашние задания
-
-  /api/liga-security/:
-    get:
-      security:
-        - Token: [ ]
-      summary: Запросить статусы кандидатов
-      operationId: Запросить статусы пользователей
-      description: 'Скачать файл со списком покупок. Это может быть TXT/PDF/CSV. Важно, чтобы контент файла удовлетворял требованиям задания. Доступно только авторизованным пользователям.'
-      parameters: []
-      responses:
-        '200':
-          description: ''
-          content:
-            application/pdf:
-              schema:
-                type: string
-                format: binary
-            text/plain:
-              schema:
-                type: string
-                format: binary
-        '401':
-          $ref: '#/components/responses/AuthenticationError'
-      tags:
-        - Служба безопасности
-    post:
-      summary: Отправить кандидата в кафку СБ
-      operationId: Отправить кандидата в кафку СБ
-      description: 'Доступно только авторизованному пользователю.'
-      security:
-        - Token: [ ]
-      parameters:
-        - name: id
-          in: path
-          required: true
-          description: "Уникальный идентификатор этого рецепта"
-          schema:
-            type: string
-      responses:
-        '201':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/RecipeMinified'
-          description: 'Рецепт успешно добавлен в избранное'
-        '400':
-          description: 'Ошибка добавления в избранное (Например, когда рецепт уже есть в избранном)'
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/SelfMadeError'
-        '401':
-          $ref: '#/components/responses/AuthenticationError'
-
-      tags:
-        - Служба безопасности
-
-  /api/hr/employees:
-    post:
-      summary: Отправить информацию о стажере в HR
-      operationId: Подписаться на пользователя
-      description: 'Доступно только авторизованным пользователям'
-      security:
-        - Token: [ ]
-      parameters:
-        - name: id
-          in: path
-          required: true
-          description: "Уникальный идентификатор этого пользователя."
-          schema:
-            type: string
-        - name: recipes_limit
+        - name: page
           required: false
           in: query
-          description: Количество объектов внутри поля recipes.
+          description: Номер страницы.
+          schema:
+            type: integer
+        - name: limit
+          required: false
+          in: query
+          description: Количество объектов на странице.
           schema:
             type: integer
       responses:
+        '200':
+          description: Список задач успешно получен
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HomeworksList'
+        '401':
+          $ref: '#/components/responses/AuthenticationError'
+        '404':
+          $ref: '#/components/responses/NotFound'
+      tags:
+        - Домашние задания
+    post:
+      summary: Создать ДЗ
+      operationId: Создать ДЗ
+      description: 'Создать домашнее задание. Доступно только руководителю стажировки, ментору и администратору.'
+      security:
+        - Token: []
+      parameters:
+        - name: traineeship_id
+          in: path
+          required: true
+          description: Уникальный идентификатор стажировки.
+          schema:
+            type: string
+        - name: lecture_id
+          in: path
+          required: true
+          description: Уникальный идентификатор лекции.
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/HomeworksCreate'
+      responses:
         '201':
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/UserWithRecipes'
-          description: 'Подписка успешно создана'
+                $ref: '#/components/schemas/Homeworks'
+          description: ДЗ успешно создано
         '400':
-          description: 'Ошибка подписки (Например, если уже подписан или при подписке на себя самого)'
+          description: 'Ошибка добавления ДЗ к лекции (Например, когда такое ДЗ в лекции уже существует)'
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/SelfMadeError'
         '401':
           $ref: '#/components/responses/AuthenticationError'
+        '403':
+          $ref: '#/components/responses/PermissionDenied'
+        '404':
+          $ref: '#/components/responses/NotFound'
+      tags:
+        - Домашние задания
+  '/api/traineeships/{traineeship_id}/lectures/{lecture_id}/homeworks/{id}/':
+    get:
+      summary: Получить конкретное ДЗ
+      operationId: ДЗ
+      description: 'Получить ДЗ по его id. Доступно стажеру, ментору, руководителю стажировки.'
+      security:
+        - Token: []
+      parameters:
+        - name: traineeship_id
+          in: path
+          required: true
+          description: Уникальный идентификатор стажировки.
+          schema:
+            type: string
+        - name: lecture_id
+          in: path
+          required: true
+          description: Уникальный идентификатор лекции.
+          schema:
+            type: integer
+        - name: id
+          in: path
+          required: true
+          description: Уникальный идентификатор ДЗ.
+          schema:
+            type: string
+      responses:
+        '200':
+          description: ДЗ успешно получено.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Homeworks'
+        '401':
+          $ref: '#/components/responses/AuthenticationError'
+        '404':
+          $ref: '#/components/responses/NotFound'
+      tags:
+        - Домашние задания
+  '/api/traineeships/{traineeship_id}/lectures/{lecture_id}/homeworks/{homework_id}/decisions/':
+    post:
+      summary: Прикрепить решение к ДЗ
+      operationId: Отправка решения ДЗ
+      description: Отправить решение ДЗ на проверку. Стажер отправляет ссылку на гугл-документ с решением. Доступно только старжеру.
+      security:
+        - Token: []
+      parameters:
+        - name: traineeship_id
+          in: path
+          required: true
+          description: Уникальный идентификатор стажировки.
+          schema:
+            type: string
+        - name: lecture_id
+          in: path
+          required: true
+          description: Уникальный идентификатор лекции.
+          schema:
+            type: string
+        - name: homework_id
+          in: path
+          required: true
+          description: Уникальный идентификатор ДЗ.
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/HomeworksDecisionsCreate'
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HomeworksDecisions'
+          description: Рецепт успешно добавлен в список покупок
+        '400':
+          description: 'Ошибка добавления ДЗ (Например, когда ДЗ уже отправлено)'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SelfMadeError'
+        '401':
+          $ref: '#/components/responses/AuthenticationError'
+        '404':
+          $ref: '#/components/responses/NotFound'
+      tags:
+        - Домашние задания
+  '/api/traineeships/{traineeship_id}/lectures/{lecture_id}/homeworks/{homework_id}/decisions/{id}':
+    get:
+      summary: Просмотреть решение ДЗ
+      operationId: Решение
+      description: 'Просмотреть решение домашнего задания конкретного стажера. Доступно только автору решения, руководителю стажировки и менторам.'
+      security:
+        - Token: []
+      parameters:
+        - name: traineeship_id
+          in: path
+          required: true
+          description: Уникальный идентификатор стажировки.
+          schema:
+            type: string
+        - name: lecture_id
+          in: path
+          required: true
+          description: Уникальный идентификатор лекции.
+          schema:
+            type: string
+        - name: homework_id
+          in: path
+          required: true
+          description: Уникальный идентификатор ДЗ.
+          schema:
+            type: string
+        - name: id
+          in: path
+          required: true
+          description: Уникальный идентификатор стажера (username).
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Решение ДЗ получено.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HomeworksDecisions'
+        '401':
+          $ref: '#/components/responses/AuthenticationError'
+      tags:
+        - Домашние задания
+    patch:
+      summary: Добавить оценку решения ДЗ
+      operationId: Add_assessment
+      description: Добавление комментария и оценки домашнего задания стажера. Доступно только ментору и руководителю стажировки.
+      security:
+        - Token: []
+      parameters:
+        - name: traineeship_id
+          in: path
+          required: true
+          description: Уникальный идентификатор стажировки.
+          schema:
+            type: string
+        - name: lecture_id
+          in: path
+          required: true
+          description: Уникальный идентификатор лекции.
+          schema:
+            type: string
+        - name: homework_id
+          in: path
+          required: true
+          description: Уникальный идентификатор ДЗ.
+          schema:
+            type: string
+        - name: id
+          in: path
+          required: true
+          description: Уникальный идентификатор стажера (username).
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/HomeworksDecisionsUpdate'
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/HomeworksDecisions'
+                  - $ref: '#/components/schemas/HomeworksDecisionsUpdate'
+          description: Лекция успешно обновлена
+        '400':
+          $ref: '#/components/responses/NestedValidationError'
+        '401':
+          $ref: '#/components/responses/AuthenticationError'
+        '403':
+          $ref: '#/components/responses/PermissionDenied'
+        '404':
+          $ref: '#/components/responses/NotFound'
+      tags:
+        - Домашние задания
+  /api/traineeships/liga-security/:
+    get:
+      summary: Обновить статус кандидата
+      operationId: Запросить статусы
+      security:
+        - Token: []
+      description: Получить статусы проверки кандидатов в СБ. Доступно только администратору.
+      parameters:
+        - name: id
+          in: query
+          required: true
+          description: Уникальный идентификатор кандидата.
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Список со статусами кандидатов
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LigaSecurityResponses'
+        '401':
+          $ref: '#/components/responses/AuthenticationError'
+        '403':
+          $ref: '#/components/responses/PermissionDenied'
+      tags:
+        - Служба безопасности
+    post:
+      summary: Отправить кандидата в СБ
+      operationId: Отправить кандидата в СБ
+      description: Отправить кандидата на проверку в СБ. Доступно только администратору.
+      security:
+        - Token: []
+      parameters: []
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LigaSecurityRequests'
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                type: string
+                example: Кандидат отправлен на рассмотрение в СБ...
+                description: Ответ от сервера
+          description: Информация о кандидате успешно отправлена в СБ
+        '400':
+          description: 'Ошибка отправки (Например, когда информация о кандидате уже отправлена в СБ)'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SelfMadeError'
+        '401':
+          $ref: '#/components/responses/AuthenticationError'
+        '403':
+          $ref: '#/components/responses/PermissionDenied'
+      tags:
+        - Служба безопасности
+  /api/traineeships/hr/employees:
+    post:
+      summary: Отправить информацию о стажере в HR
+      operationId: HR
+      description: 'Отправить информацию в HR о стажере, которого нужно взять в штат. Доступно только руководителю стажировки.'
+      security:
+        - Token: []
+      parameters: []
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/HrRequests'
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                type: string
+                example: Информация о стажере отправлена на оформление в HR...
+                description: Ответ от сервера
+          description: Информация о стажере успешно отправлена в HR
+        '400':
+          description: 'Ошибка подписки (Например, если запрос уже отправили)'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SelfMadeError'
+        '401':
+          $ref: '#/components/responses/AuthenticationError'
+        '403':
+          $ref: '#/components/responses/PermissionDenied'
         '404':
           $ref: '#/components/responses/NotFound'
       tags:
         - HR
-
-
-  /api/programs/:
+  /api/traineeships/:
     post:
-      summary: Создание программы стажировки
-      operationId: Подписаться на пользователя
-      description: 'Доступно только авторизованным пользователям'
+      summary: Создать стажировку
+      operationId: Создание стажировки
+      description: Создание стажировки доступно только администратору
       security:
-        - Token: [ ]
-      parameters:
-        - name: id
-          in: path
-          required: true
-          description: "Уникальный идентификатор этого пользователя."
-          schema:
-            type: string
-        - name: recipes_limit
-          required: false
-          in: query
-          description: Количество объектов внутри поля recipes.
-          schema:
-            type: integer
+        - Token: []
+      parameters: []
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TraineeshipsCreate'
       responses:
         '201':
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/UserWithRecipes'
-          description: 'Подписка успешно создана'
+                type: string
+                example: 'Новая стажировка с названием "{title}" создана'
+                description: Ответ от сервера
+          description: Стажировка успешно создана
         '400':
           description: 'Ошибка подписки (Например, если уже подписан или при подписке на себя самого)'
           content:
@@ -872,18 +1111,74 @@ paths:
                 $ref: '#/components/schemas/SelfMadeError'
         '401':
           $ref: '#/components/responses/AuthenticationError'
+        '403':
+          $ref: '#/components/responses/PermissionDenied'
         '404':
           $ref: '#/components/responses/NotFound'
       tags:
-        - Управление программами стажировок
-  /api/programs/{id}/:
+        - Стажировка
+  '/api/traineeships/{traineeship_id}/':
+    patch:
+      summary: Добавить руководителя стажировки
+      operationId: Назначение руководителя
+      description: После создания стажировки администратор должен назничить руководителя через поиск по ФИО. После чего id нового администратора добавляестся в таблицу со стажировками
+      security:
+        - Token: []
+      parameters:
+        - name: traineeship_id
+          in: path
+          required: true
+          description: Уникальный идентификатор стажировки.
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TraineeshipsCreateUpdate'
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/TraineeshipsCreate'
+                  - $ref: '#/components/schemas/TraineeshipsCreateUpdate'
+          description: Стажировка успешно создана
+        '400':
+          description: 'Ошибка назначения (Например, если id руководителя не существует)'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SelfMadeError'
+        '401':
+          $ref: '#/components/responses/AuthenticationError'
+        '403':
+          $ref: '#/components/responses/PermissionDenied'
+        '404':
+          $ref: '#/components/responses/NotFound'
+      tags:
+        - Стажировка
+  '/api/traineeships/{traineeship_id}/programs/{id}/':
     get:
       security:
-        - Token: [ ]
-      summary: Просмотр программы стажировки
-      operationId: Запросить статусы пользователей
-      description: 'Скачать файл со списком покупок. Это может быть TXT/PDF/CSV. Важно, чтобы контент файла удовлетворял требованиям задания. Доступно только авторизованным пользователям.'
-      parameters: []
+        - Token: []
+      summary: Скачать программу стажировки
+      operationId: Скачать програму стажировки
+      description: 'Скачать файл с программой стажировки. Это может быть TXT/PDF/CSV. Важно, чтобы контент файла удовлетворял требованиям задания. Доступно стажерам, менторам, руководителю стажировки и админам.'
+      parameters:
+        - name: traineeship_id
+          in: path
+          required: true
+          description: Уникальный идентификатор стажировки.
+          schema:
+            type: string
+        - name: id
+          in: path
+          required: true
+          description: Уникальный идентификатор  стажировки.
+          schema:
+            type: string
       responses:
         '200':
           description: ''
@@ -899,66 +1194,12 @@ paths:
         '401':
           $ref: '#/components/responses/AuthenticationError'
       tags:
-        - Управление программами стажировок
-    patch:
-      summary: Обновление программы стажировки
-      operationId: Обновление лекции
-      security:
-        - Token: [ ]
-      description: 'Добавление материалов лекции. Доступно только руководителю стажировки и ментору'
-      parameters:
-        - name: id
-          in: path
-          required: true
-          description: "Уникальный идентификатор этого рецепта."
-          schema:
-            type: string
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/RecipeCreateUpdate'
-      responses:
-        '200':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/RecipeList'
-          description: 'Лекция успешно обновлена'
-        '400':
-          $ref: '#/components/responses/NestedValidationError'
-        '401':
-          $ref: '#/components/responses/AuthenticationError'
-        '403':
-          $ref: '#/components/responses/PermissionDenied'
-        '404':
-          $ref: '#/components/responses/NotFound'
-
-      tags:
-        - Управление программами стажировок
-  /api/users/set_password/:
-    post:
-      operationId: Изменение пароля
-      description: 'Изменение пароля текущего пользователя'
-      parameters: []
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/SetPassword'
-      responses:
-        '204':
-          description: 'Пароль успешно изменен'
-        '400':
-          $ref: '#/components/responses/ValidationError'
-        '401':
-          $ref: '#/components/responses/AuthenticationError'
-      tags:
-        - Пользователи
+        - Стажировка
   /api/auth/token/login/:
     post:
+      summary: Получить токен авторизации
       operationId: Получить токен авторизации
-      description: Используется для авторизации по емейлу и паролю, чтобы далее использовать токен при запросах.
+      description: 'Используется для авторизации по username и паролю, чтобы далее использовать токен при запросах.'
       parameters: []
       requestBody:
         content:
@@ -976,6 +1217,7 @@ paths:
         - Пользователи
   /api/auth/token/logout/:
     post:
+      summary: Удаление токена
       operationId: Удаление токена
       description: Удаляет токен текущего пользователя
       parameters: []
@@ -983,7 +1225,6 @@ paths:
         content:
           application/json:
             schema: {}
-
       responses:
         '204':
           content:
@@ -997,7 +1238,7 @@ paths:
 components:
   schemas:
     Candidate:
-      description:  'Полные данные стажера'
+      description: Полные данные стажера
       type: object
       properties:
         id:
@@ -1005,107 +1246,140 @@ components:
           readOnly: true
         username:
           type: string
-          description: "Уникальный юзернейм в виде номера телефона"
-          pattern: ^(7+([0-9]){10})$
+          description: Уникальный идентификатор в виде номера телефона
+          pattern: '^(7+([0-9]){10})$'
+          example: '79000000000'
           maxLength: 15
         first_name:
           type: string
           maxLength: 150
-          description: "Имя"
-          example: "Вася"
+          description: Имя
+          example: Вася
         last_name:
           type: string
           maxLength: 150
-          description: "Фамилия"
-          example: "Пупкин"
+          description: Фамилия
+          example: Пупкин
         middle_name:
           type: string
           maxLength: 150
-          description: "Отчество"
-          example: "Алибабаевич"
+          description: Отчество
+          example: Алибабаевич
         address:
           type: string
-          description: "Прописка"
+          description: Прописка
         birthday:
           type: string
-          description: "Дата рождения"
-          example: "2009-06-06"
+          description: Дата рождения
+          example: '2009-06-06'
+          format: date
         email:
           type: string
           format: email
           maxLength: 254
-          description: "Адрес электронной почты"
-    required:
-      - username
-      - first_name
-      - last_name
-      - middle_name
-      - address
-      - birthday
-      - email
-      
+          description: Адрес электронной почты
+      required:
+        - username
+        - first_name
+        - last_name
+        - middle_name
+        - address
+        - birthday
+        - email
+      x-stoplight:
+        id: q5a5d3tuqz6sv
     IntroductoryTasks:
-      description:  'Решение вступительных задач'
+      description: Решение вступительных задач
       type: object
       properties:
-        internship_id:
+        traineeship_id:
           type: integer
-          description: "Уникальный id стажировки"
+          description: Уникальный id стажировки
         tasks:
           type: array
-          description: "Список задач"
+          description: Список задач
           items:
             type: object
             properties:
               task_id:
                 type: integer
-                description: "Уникальный id задачи"
+                description: Уникальный id задачи
               solution:
                 type: string
-                description: "Текстовое описание решения или ссылка на онлайн ресурс с решением"
-                example: "https://docs.google.com/document/u/0/"
+                description: Текстовое описание решения или ссылка на онлайн ресурс с решением
+                example: 'https://docs.google.com/document/u/0/'
       required:
         - tasks
-
+      x-stoplight:
+        id: nf7ijiig9xr7d
     User:
-      description:  'Текущий пользователь для отображения в ЛК'
+      description: Текущий пользователь для отображения в ЛК
       type: object
       properties:
         schema:
           $ref: '#/components/schemas/Candidate'
         role:
           type: string
-          description: "Роль пользователя в системе"
-          example: "Стажер"
+          description: Роль пользователя в системе
+          example: Стажер
       required:
         - username
-
+      x-stoplight:
+        id: qcweyjbn1jnat
+    UserAD:
+      type: object
+      properties:
+        count:
+          type: integer
+          example: 123
+          description: Общее количество объектов в базе
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: 'http://internship.example.org/api/users/?page=4'
+          description: Ссылка на следующую страницу
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: 'http://internship.example.org/api/users/?page=2'
+          description: Ссылка на предыдущую страницу
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/UserSearch'
+          description: Список объектов текущей страницы
+      x-stoplight:
+        id: 9awt556dl9yuq
     Intern:
-      description:  'Полные данные стажера'
+      description: Полные данные стажера
       type: object
       properties:
         schema:
           $ref: '#/components/schemas/Candidate'
         role:
           type: string
-          description: "Роль пользователя в системе"
-          example: "Стажер"
+          description: Роль пользователя в системе
+          example: Стажер
         mentors:
           type: array
-          description: "Список соответствий стажировка - ментор для конкретного стажера"
+          description: Список соответствий стажировка - ментор для конкретного стажера
           items:
             type: object
             properties:
-              internship_id:
+              traineeship_id:
                 type: integer
-                description: "Уникальный id стажировки"
+                description: Уникальный id стажировки
               mentor_id:
                 type: integer
-                description: "Уникальный id ментора"
+                description: Уникальный id ментора
       required:
         - username
+      x-stoplight:
+        id: zbaj17jeuf9aq
     UserSearch:
-      description:  'Пользователь из БД AD'
+      description: Пользователь из БД AD
       type: object
       properties:
         id:
@@ -1113,170 +1387,177 @@ components:
           readOnly: true
         username:
           type: string
-          description: "Уникальный юзернейм в виде номера телефона"
-          pattern: ^(7+([0-9]){10})$
+          description: Уникальный юзернейм в виде номера телефона
+          pattern: '^(7+([0-9]){10})$'
           maxLength: 15
         first_name:
           type: string
           maxLength: 150
-          description: "Имя"
-          example: "Вася"
+          description: Имя
+          example: Вася
         last_name:
           type: string
           maxLength: 150
-          description: "Фамилия"
-          example: "Пупкин"
+          description: Фамилия
+          example: Пупкин
         middle_name:
           type: string
           maxLength: 150
-          description: "Отчество"
-          example: "Алибабаевич"
+          description: Отчество
+          example: Алибабаевич
       required:
         - username
+      x-stoplight:
+        id: r073yipmhqp0x
     InternWithMentor:
-      description: 'Расширенный объект пользователя с рецептами'
+      description: Расширенный объект пользователя с рецептами
       type: object
       properties:
         id:
           type: integer
           readOnly: true
-        internship_id:
+        traineeship_id:
           type: integer
         mentor_id:
           type: integer
-
+      x-stoplight:
+        id: dit0womviu4k4
     Templates:
       type: object
       properties:
         id:
           type: integer
           readOnly: true
-          description: 'Уникальный id'
+          description: Уникальный id
         count:
           type: integer
-          description: 'Количество шаблонов'
+          description: Количество шаблонов
         template:
           type: object
           properties:
             id:
               type: integer
               readOnly: true
-              description: 'Уникальный id шаблона'
+              description: Уникальный id шаблона
             count:
               type: integer
-              description: 'Количество шаблонов'
+              description: Количество шаблонов
             template:
-              description: 'Список шаблонов'
+              description: Список шаблонов
               type: array
               items:
-                  $ref: '#/components/schemas/TemplateList'
+                $ref: '#/components/schemas/TemplateList'
       required:
         - count
         - template
-
+      x-stoplight:
+        id: fv5x8kis98utg
     TemplateList:
       type: object
       properties:
         template_id:
           type: integer
-          description: 'Уникальный id шаблона'
+          description: Уникальный id шаблона
         image_ling:
           type: string
-          description: 'Ссылка на изобращение шаблона'
-          example: "http://internship.example.org/static/example.jpg"
+          description: Ссылка на изобращение шаблона
+          example: 'http://internship.example.org/static/example.jpg'
+          format: url
         text:
-          description: 'Описание'
+          description: Описание
           type: string
       required:
         - count
         - template
-        
+      x-stoplight:
+        id: 3al2xw7dofl3m
     Template:
       type: object
       properties:
         template_id:
           type: integer
-          description: 'Уникальный id шаблона'
+          description: Уникальный id шаблона
         html:
           type: string
-          description: 'HTML верстка страницы'
-          example: "<div class=\"form\" >foo-bar</div>"
+          description: HTML верстка страницы
+          example: <div class="form" >foo-bar</div>
         css-libs:
           type: string
-          description: 'Стиль CSS страницы'
-          example: "test-forms-1.0.css"
+          description: Стиль CSS страницы
+          example: test-forms-1.0.css
         js-libs:
           type: string
-          description: 'Скрипт JS для HTML страницы'
-          example: "test-forms-1.0.js"
+          description: Скрипт JS для HTML страницы
+          example: test-forms-1.0.js
       required:
         - count
         - template
-
-
-    AnnouncementsCreate:
+      x-stoplight:
+        id: urs1cygd4vegv
+    ProjectsCreate:
       type: object
       properties:
         projectid:
           type: integer
         title:
           type: string
-          description: 'Заголовок'
-          example: 'Стажировка по системной аналитике'
+          description: Заголовок
+          example: Стажировка по системной аналитике
         blocks:
           type: array
           items:
             type: object
             properties:
-              sorts[0]:
+              'sorts[0]':
                 type: object
-                description: 'Блок с определенным порядком'
+                description: Блок с определенным порядком
                 properties:
-                  block_id: 
+                  block_id:
                     type: string
-                    description: 'Уникальный идентификатор блока'
+                    description: Уникальный идентификатор блока
                     example: '668483038'
                   changes:
                     type: array
-                    description: 'Список всех изменений элементов блока'
+                    description: Список всех изменений элементов блока
                     items:
                       type: object
                       properties:
-                        only_this_field: 
+                        only_this_field:
                           type: string
-                          description: 'Уникальный идентификатор элемента блока'
-                          example: 'title'
+                          description: Уникальный идентификатор элемента блока
+                          example: title
                         block_info:
                           type: string
-                          description: 'Текст элемента'
-                          example: 'Заголовок формы'
-              sorts[1]:
+                          description: Текст элемента
+                          example: Заголовок формы
+              'sorts[1]':
                 type: object
-                description: 'Блок с определенным порядком'
+                description: Блок с определенным порядком
                 properties:
-                  block_id: 
+                  block_id:
                     type: string
-                    description: 'Уникальный идентификатор блока'
+                    description: Уникальный идентификатор блока
                     example: '668482970'
                   changes:
                     type: array
-                    description: 'Список всех изменений элементов блока'
+                    description: Список всех изменений элементов блока
                     items:
                       type: object
                       properties:
-                        only_this_field: 
+                        only_this_field:
                           type: string
-                          description: 'Уникальный идентификатор элемента блока'
-                          example: 'li_title_1'
+                          description: Уникальный идентификатор элемента блока
+                          example: li_title_1
                         block_info:
                           type: string
-                          description: 'Текст элемента'
-                          example: 'E-mail'
+                          description: Текст элемента
+                          example: E-mail
       required:
         - projectid
         - title
         - blocks
-        
+      x-stoplight:
+        id: v3xsexsmb92ku
     AnnouncementsResponseOnCreate:
       type: object
       properties:
@@ -1284,78 +1565,467 @@ components:
           type: integer
         link:
           type: string
-          description: 'Ссылка на лендинг'
+          description: Ссылка на лендинг
           example: 'http://internship.example.org/api/announcements/123/'
+          format: url
         publish_onepage:
           type: boolean
-          description: 'Страница уже опубликована в открытом доступе?'
-          example: 'yes'
+          description: Страница уже опубликована в открытом доступе?
+          example: true
       required:
         - projectid
         - link
         - publish_onepage
-
-    RecipeMinified:
+      x-stoplight:
+        id: npc1tn8hcwte1
+    LecturesMinified:
       type: object
       properties:
         id:
           type: integer
           readOnly: true
-          description: 'Уникальный id'
+          description: Уникальный id
         name:
           type: string
           maxLength: 200
-          description: 'Название'
+          description: Название лекции
+        date_lecture:
+          description: Дата проведения лекции по расписанию
+          type: string
+          example: '2023-11-17'
+          format: date
+      required:
+        - name
+        - date_lecture
+      x-stoplight:
+        id: 1gzlfemeqngmh
+    Lectures:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+          description: Уникальный id
+        name:
+          type: string
+          maxLength: 200
+          description: Название лекции
         image:
-          description: 'Ссылка на картинку на сайте'
-          example: 'http://foodgram.example.org/media/recipes/images/image.jpeg'
+          description: Ссылка на картинку на сайте
+          example: 'http://internship.example.org/media/lectures/images/image.jpeg'
           type: string
           format: url
-        cooking_time:
-          description: 'Время приготовления (в минутах)'
+        link_presentation:
+          description: Ссылка на презентацию
+          example: 'http://internship.example.org/media/lectures/images/presentation.jpeg'
+          type: string
+          format: url
+        link_record:
+          description: Ссылка на запись лекции
+          example: 'http://internship.example.org/media/lectures/images/record.jpeg'
+          type: string
+          format: url
+        homework_id:
+          description: Внешний ключ id для связи с домашней работой
           type: integer
-          minimum: 1
-    Ingredient:
+          example: 2
+        date_lecture:
+          description: Дата проведения лекции по расписанию
+          type: string
+          example: '2023-11-17'
+          format: date
+      required:
+        - name
+        - date_lecture
+      x-stoplight:
+        id: in07zip1m3uv0
+    LecturesList:
+      type: array
+      description: Список лекций
+      items:
+        $ref: '#/components/schemas/Lectures'
+      x-stoplight:
+        id: 39xenapkp4t11
+    LecturesCreate:
+      type: object
+      properties:
+        name:
+          type: string
+          maxLength: 200
+          description: Название лекции
+        date_lecture:
+          description: Дата проведения лекции по расписанию
+          type: string
+          example: '2023-11-17'
+          format: date
+      required:
+        - name
+        - date_lecture
+      x-stoplight:
+        id: f65d5n18tfx12
+    LecturesUpdate:
+      type: object
+      properties:
+        image:
+          description: Ссылка на картинку на сайте
+          example: 'http://internship.example.org/media/lectures/images/image.jpeg'
+          type: string
+          format: url
+        link_presentation:
+          description: Ссылка на презентацию
+          example: 'http://internship.example.org/media/lectures/images/presentation.jpeg'
+          type: string
+          format: url
+        link_record:
+          description: Ссылка на запись лекции
+          example: 'http://internship.example.org/media/lectures/images/record.jpeg'
+          type: string
+          format: url
+        homework_id:
+          description: Внешний ключ id для связи с домашней работой
+          type: integer
+          example: 2
+      required:
+        - link_presentation
+        - link_record
+      x-stoplight:
+        id: 5q8yl2ojnf21j
+    Homeworks:
       type: object
       properties:
         id:
           type: integer
           readOnly: true
-        name:
+        title:
           type: string
           maxLength: 200
-          example: 'Капуста'
-        measurement_unit:
+          example: Капуста
+        traineeship_id:
+          type: integer
+          description: Уникальный идентификатор стажировки
+        lecture_id:
+          type: integer
+          description: Уникальный идентификатор лекции
+        homework_text:
           type: string
-          maxLength: 200
-          example: 'кг'
+          description: Описание ДЗ
+          example: Овощ
+        image:
+          description: Ссылка на картинку для ДЗ
+          example: 'http://internship.example.org/media/lectures/images/DZ.jpeg'
+          type: string
+          format: url
+        homework_list:
+          type: array
+          description: Список с задачами
+          items:
+            type: object
+            properties:
+              condition:
+                type: string
+                description: Текст вопроса ДЗ
+                example: Помогает ли капуста от облысения?
+              id:
+                type: integer
+                description: Уникальный идентификатор условия задачи
+                example: 1
       required:
         - name
         - measurement_unit
-    IngredientInRecipe:
+      x-stoplight:
+        id: rvczzu20vldkq
+    HomeworksList:
+      type: array
+      description: Список ДЗ
+      items:
+        $ref: '#/components/schemas/Homeworks'
+      x-stoplight:
+        id: th9fpte9bdx9m
+    HomeworksCreate:
       type: object
       properties:
         id:
           type: integer
           readOnly: true
-        name:
+        title:
           type: string
           maxLength: 200
-          description: 'Название'
-          example: 'Картофель отварной'
-        measurement_unit:
+          example: Капуста
+        homework_text:
           type: string
-          maxLength: 200
-          description: 'Единицы измерения'
-          example: 'г'
-        amount:
-          type: integer
-          description: 'Количество'
-          minimum: 1
-
+          description: Описание ДЗ
+          example: Овощ
+        image:
+          description: Ссылка на картинку для ДЗ
+          example: 'http://internship.example.org/media/lectures/images/DZ.jpeg'
+          type: string
+          format: url
+        homework_list:
+          type: array
+          description: Список с задачами
+          items:
+            type: object
+            properties:
+              condition:
+                type: string
+                description: Текст вопроса ДЗ
+                example: Помогает ли капуста от облысения?
+              number:
+                type: integer
+                description: Номер вопроса
+                example: 1
       required:
         - name
         - measurement_unit
+      x-stoplight:
+        id: likgdjb1m8zzi
+    HomeworksDecisions:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        username:
+          type: string
+          description: Уникальный идентификатор стажера
+        traineeship_id:
+          type: integer
+          description: Уникальный идентификатор стажировки
+        homework_id:
+          type: integer
+          description: Уникальный идентификатор ДЗ
+        link:
+          description: Ссылка на решения ДЗ
+          example: 'https://docs.google.com/document/u/0/'
+          type: string
+          format: url
+      required:
+        - homework_id
+        - link
+      x-stoplight:
+        id: 1enoxawx52o17
+    FormsDecisions:
+      type: object
+      description: Вся информация о кандидате вместе с его решениями вступительных задач
+      properties:
+        info:
+          $ref: '#/components/schemas/Candidate'
+        tasks:
+          type: array
+          description: Список ответов кандидата
+          items:
+            properties:
+              id:
+                type: integer
+                readOnly: true
+              username:
+                type: string
+                description: Уникальный идентификатор стажера
+              traineeship_id:
+                type: integer
+                description: Уникальный идентификатор стажировки
+              questios_id:
+                type: integer
+                description: Уникальный идентификатор вопроса формы
+              answer_text/link:
+                description: Текстовый ответ или ссылка на решение
+                example: 'https://docs.google.com/document/u/0/'
+                type: string
+          required:
+            - username
+            - traineeship_id
+            - questios_id
+            - answer_text/link
+        status_from_supervisor:
+          $ref: '#/components/schemas/FormsDecisionsUpdate'
+        status_from_SS:
+          type: object
+          description: Результаты проверки кандидата руководителем стажировки
+          properties:
+            status:
+              type: string
+              description: Cтатус проверки кандидата от службы безопасности
+              example: Нет статуса. Кандидат не отправлялся в СБ
+            description:
+              type: string
+              description: Комментарий от СБ
+              example: None
+      required:
+        - info
+        - tasks
+        - questios_id
+        - answer_text/link
+      x-stoplight:
+        id: kk0zd3tekydnx
+      x-examples: {}
+    FormsDecisionsUpdate:
+      type: object
+      description: Результаты проверки кандидата руководителем стажировки
+      properties:
+        status:
+          type: string
+          description: Cтатус проверки кандидата от руководителя стажировки
+          example: Одобрено
+        description:
+          type: string
+          description: Комментарий от руководителя стажировки
+      required:
+        - status_from_supervisor
+      x-stoplight:
+        id: t4gsh6pg7zykq
+    FormsDecisionsList:
+      type: object
+      description: Список кандидатов на стажировку
+      properties:
+        count:
+          type: integer
+          example: 100
+          description: Общее количество объектов в базе
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: 'http://internship.example.org/api/users/candidates/?page=4'
+          description: Ссылка на следующую страницу
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: 'http://internship.example.org/api/users/candidates/?page=2'
+          description: Ссылка на предыдущую страницу
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/FormsDecisions'
+          description: Список объектов текущей страницы
+      required:
+        - count
+        - next
+        - results
+      x-stoplight:
+        id: kvofk07h0kira
+    HomeworksDecisionsCreate:
+      type: object
+      properties:
+        link:
+          description: Ссылка на решения ДЗ
+          example: 'https://docs.google.com/document/u/0/'
+          type: string
+          format: url
+      required:
+        - link
+      x-stoplight:
+        id: etpxe2h9qjwb7
+    HomeworksDecisionsUpdate:
+      type: object
+      properties:
+        mentor_id:
+          type: integer
+          description: Уникальный идентификатор ментора
+        assessment:
+          description: Оценка от ментора
+          example: 90
+          type: integer
+          minimum: 1
+        commentary:
+          description: Комментарий по решению от ментора
+          example: Отлично!
+          type: string
+      required:
+        - link
+      x-stoplight:
+        id: h2fwug6nfg0al
+    LigaSecurityRequests:
+      type: object
+      properties:
+        username:
+          type: string
+          description: Уникальный идентификатор cтажера
+          example: '79000000000'
+        traineeship_id:
+          type: integer
+          description: Уникальный идентификатор стажировки
+      required:
+        - id
+        - traineeship_id
+      x-stoplight:
+        id: yece66j8hcs3b
+    LigaSecurityResponses:
+      type: object
+      properties:
+        id:
+          type: integer
+          description: Уникальный идентификатор кандидата
+        traineeship_id:
+          type: integer
+          description: Уникальный идентификатор стажировки
+        status:
+          type: string
+          description: Cтатус проверки
+          example: Проверка пройдена успешно
+        description:
+          type: string
+          description: Комментарий от СБ
+      required:
+        - id
+        - traineeship_id
+        - status
+      x-stoplight:
+        id: c6z3zc7wyy75y
+    HrRequests:
+      type: object
+      properties:
+        username:
+          type: string
+          description: Уникальный идентификатор cтажера
+          example: '79000000000'
+        traineeship_id:
+          type: integer
+          description: Уникальный идентификатор стажировки
+      required:
+        - id
+        - traineeship_id
+      x-stoplight:
+        id: mrz4xw214e7py
+    TraineeshipsCreate:
+      type: object
+      properties:
+        title:
+          type: string
+          description: Заголовок стажировки
+          example: Стажировка по SA
+        duration:
+          type: string
+          description: Длительность стажировки
+          example: 6 недель
+        start:
+          type: string
+          description: Дата начала стажировки
+          example: '2023-10-01'
+          format: date
+        description:
+          type: string
+          description: Описание стажировки
+      required:
+        - title
+        - duration
+        - start
+        - name
+        - description
+        - supervisor_id
+      x-stoplight:
+        id: 5uzbvfh5svfwb
+    TraineeshipsCreateUpdate:
+      type: object
+      properties:
+        supervisor_id:
+          type: integer
+          description: Уникальный идентификатор руководителя стажировки
+          example: 1
+      required:
+        - supervisor_id
+      x-stoplight:
+        id: cxk1fbzh8qlmh
     CustomUserCreate:
       type: object
       properties:
@@ -1364,238 +2034,124 @@ components:
           readOnly: true
         username:
           type: string
-          description: "Уникальный юзернейм в виде номера телефона"
-          pattern: ^(7+([0-9]){10})$
+          description: Уникальный юзернейм в виде номера телефона
+          pattern: '^(7+([0-9]){10})$'
           maxLength: 15
-          example: "79000000000"
+          example: '79000000000'
       required:
         - username
-    CustomUserResponseOnCreate:
-      type: object
-      properties:
-        id:
-          type: integer
-          readOnly: true
-        username:
-          type: string
-          description: "Уникальный юзернейм"
-          pattern: ^[\w.@+-]+\z
-          maxLength: 150
-          example: "79000000000"
-      required:
-        - username
-    Activation:
-      type: object
-      properties:
-        uid:
-          type: string
-        token:
-          type: string
-      required:
-        - uid
-        - token
-    SendEmailReset:
-      type: object
-      properties:
-        email:
-          type: string
-          format: email
-      required:
-        - email
-    PasswordResetConfirm:
-      type: object
-      properties:
-        uid:
-          type: string
-        token:
-          type: string
-        new_password:
-          type: string
-      required:
-        - uid
-        - token
-        - new_password
-    UsernameResetConfirm:
-      type: object
-      properties:
-        new_email:
-          type: string
-          format: email
-          maxLength: 254
-    SetPassword:
-      type: object
-      properties:
-        new_password:
-          type: string
-        current_password:
-          type: string
-      required:
-        - new_password
-        - current_password
-    SetUsername:
-      type: object
-      properties:
-        current_password:
-          type: string
-        new_email:
-          type: string
-          format: email
-          maxLength: 254
-      required:
-        - current_password
+      x-stoplight:
+        id: 5zlvhlsyx24rm
     TokenCreate:
       type: object
       properties:
+        username:
+          type: string
         password:
           type: string
-        email:
-          type: string
+      x-stoplight:
+        id: 87jsushhw9gln
     TokenGetResponse:
       type: object
       properties:
-        auth_token:
+        token:
           type: string
-    RecipeCreateUpdate:
-      type: object
-      properties:
-        id:
+          example: token
+        expires_in:
           type: integer
-          readOnly: true
-        ingredients:
-          description: Список ингредиентов
-          type: array
-          items:
-            example:
-              id: 1123
-              amount: 10
-            type: object
-            properties:
-              id:
-                description: 'Уникальный id'
-                type: integer
-              amount:
-                description: 'Количество в рецепте'
-                type: integer
-            required:
-              - id
-              - amount
-        tags:
-          description: 'Список id тегов'
-          type: array
-          example: [1, 2]
-          items:
-            type: integer
-        image:
-          description: 'Картинка, закодированная в Base64'
-          example: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABAgMAAABieywaAAAACVBMVEUAAAD///9fX1/S0ecCAAAACXBIWXMAAA7EAAAOxAGVKw4bAAAACklEQVQImWNoAAAAggCByxOyYQAAAABJRU5ErkJggg=='
+          example: 86400
+        token_type:
           type: string
-          format: binary
-        name:
-          description: 'Название'
-          type: string
-          maxLength: 200
-        text:
-          description: 'Описание'
-          type: string
-        cooking_time:
-          description: 'Время приготовления (в минутах)'
-          type: integer
-          minimum: 1
-      required:
-        - ingredients
-        - tags
-        - image
-        - name
-        - text
-        - cooking_time
-
+          example: bearer
+      x-stoplight:
+        id: sj4h2a63eqnvi
     ValidationError:
       description: Стандартные ошибки валидации JSF
       type: object
       properties:
         username:
           description: 'Название поля, в котором произошли ошибки. Таких полей может быть несколько'
-          example: [ 'Обязательное поле.' ]
+          example:
+            - Обязательное поле.
           type: array
           items:
             type: string
+      x-stoplight:
+        id: 66ex15hxidak9
     NestedValidationError:
       description: Стандартные ошибки валидации JSF
       type: object
       properties:
-        ingredients:
-          description: 'Ошибки в ингредиентах. В приведенном примере в первом и третьем ингредиенте не было ошибок (amount >= 1), а во втором были.'
-          example: [{},{"amount":["Убедитесь, что это значение больше либо равно 1."]}, {}]
-          type: array
-          items:
-            type: object
-            properties:
-              amount:
-                type: array
-                items:
-                  type: string
-
+        assessment:
+          description: Ошибка оценки.
+          example: 'Убедитесь, что это значение больше либо равно 1.'
+          type: string
+      x-stoplight:
+        id: bfxuy4tzezvl0
     SelfMadeError:
       description: Ошибка
       type: object
       properties:
         errors:
-          description: 'Описание ошибки'
+          description: Описание ошибки
           type: string
-
+      x-stoplight:
+        id: mkoi8ujjsyymy
     AuthenticationError:
       description: Пользователь не авторизован
       type: object
       properties:
         detail:
-          description: 'Описание ошибки'
-          example: "Учетные данные не были предоставлены."
+          description: Описание ошибки
+          example: Учетные данные не были предоставлены.
           type: string
-
+      x-stoplight:
+        id: 8t70pzu49aole
     PermissionDenied:
       description: Недостаточно прав
       type: object
       properties:
         detail:
-          description: 'Описание ошибки'
-          example: "У вас недостаточно прав для выполнения данного действия."
+          description: Описание ошибки
+          example: У вас недостаточно прав для выполнения данного действия.
           type: string
+      x-stoplight:
+        id: 5l7lujckx4q0o
     NotFound:
       description: Объект не найден
       type: object
       properties:
         detail:
-          description: 'Описание ошибки'
-          example: "Страница не найдена."
+          description: Описание ошибки
+          example: Страница не найдена.
           type: string
-    
+      x-stoplight:
+        id: o3wr7ilpq86z5
     ConflictError:
       description: Данный ресурс уже существует
       type: object
       properties:
         detail:
-          description: 'Описание ошибки'
-          example: "Вы уже отправляли запрос."
+          description: Описание ошибки
+          example: Вы уже отправляли запрос.
           type: string
-
+      x-stoplight:
+        id: 1wwsxrj6noytq
   responses:
-  
     ValidationError:
-      description: 'Ошибки валидации в стандартном формате JSF'
+      description: Ошибки валидации в стандартном формате JSF
       content:
         application/json:
           schema:
             $ref: '#/components/schemas/ValidationError'
-
     ConflictError:
-      description: 'Даннный объект уже существует'
+      description: Даннный объект уже существует
       content:
         application/json:
           schema:
             $ref: '#/components/schemas/ConflictError'
-
     AnnouncementsValidationError:
-      description: 'Данный запрос не может быть обработан'
+      description: Данный запрос не может быть обработан
       content:
         application/json:
           schema:
@@ -1604,11 +2160,11 @@ components:
             properties:
               block:
                 description: 'Название поля, в котором произошли ошибки. Таких полей может быть несколько'
-                example: [ 'Блок "form" с id "668483038" содержит недопустимые значения' ]
+                example:
+                  - Блок "form" с id "668483038" содержит недопустимые значения
                 type: array
                 items:
                   type: string
-            
     NestedValidationError:
       description: 'Ошибки валидации в стандартном формате JSF, в том числе с внутренними элементами.'
       content:
@@ -1617,35 +2173,27 @@ components:
             oneOf:
               - $ref: '#/components/schemas/NestedValidationError'
               - $ref: '#/components/schemas/ValidationError'
-    
     AuthenticationError:
       description: Пользователь не авторизован
       content:
         application/json:
           schema:
             $ref: '#/components/schemas/AuthenticationError'
-
     PermissionDenied:
       description: Недостаточно прав
       content:
         application/json:
           schema:
             $ref: '#/components/schemas/PermissionDenied'
-
     NotFound:
       description: Объект не найден
       content:
         application/json:
           schema:
             $ref: '#/components/schemas/NotFound'
-
-
   securitySchemes:
     Token:
       description: 'Авторизация по токену. <br> Все запросы от имени пользователя должны выполняться с заголовком "Authorization: Token TOKENVALUE"'
       type: http
       scheme: bearer
       bearerFormat: JWT
-      scopes:
-        admin: Admin scope
-        user: User scope
