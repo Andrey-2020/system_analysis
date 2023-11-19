@@ -1035,6 +1035,8 @@ paths:
                 $ref: '#/components/schemas/HomeworkDecisions'
         '401':
           $ref: '#/components/responses/AuthenticationError'
+        '404':
+          $ref: '#/components/responses/NotFound'
         '500':
           $ref: '#/components/responses/InternalServerError'
       tags:
@@ -1308,6 +1310,8 @@ paths:
           $ref: '#/components/responses/PermissionDenied'
         '404':
           $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
       tags:
         - Стажировка
   '/api/traineeships/{traineeship_id}/programs/{id}':
@@ -1344,6 +1348,10 @@ paths:
                 format: binary
         '401':
           $ref: '#/components/responses/AuthenticationError'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
       tags:
         - Стажировка
   /api/auth/token/login:
@@ -1363,7 +1371,9 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/TokenGetResponse'
-          description: ''
+          description: Вход выполнен
+        '500':
+          $ref: '#/components/responses/InternalServerError'
       tags:
         - Пользователи
   /api/auth/token/logout:
@@ -1386,6 +1396,8 @@ paths:
           description: ''
         '401':
           $ref: '#/components/responses/AuthenticationError'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
       tags:
         - Пользователи
 components:
@@ -2092,7 +2104,7 @@ components:
           type: integer
           minimum: 1
         commentary:
-          description: Комментарий по решению от ментора
+          description: Комментарий по решению ДЗ от ментора
           example: Отлично!
           type: string
       required:
@@ -2101,6 +2113,7 @@ components:
         - commentary
     LigaSecurityRequests:
       type: object
+      description: Проверка кандидата на стажировку в СБ
       properties:
         username:
           type: string
@@ -2110,12 +2123,13 @@ components:
           type: integer
           description: Уникальный идентификатор стажировки
       required:
-        - id
+        - username
         - traineeship_id
       x-stoplight:
         id: dk7z43zf0llfe
     LigaSecurityResponses:
       type: object
+      description: Результат проверки стажера в СБ
       properties:
         id:
           type: integer
@@ -2138,6 +2152,7 @@ components:
         id: eq9i34bffbgtu
     HrRequests:
       type: object
+      description: Запрос в отдел HR на трудоустройство стажера
       properties:
         username:
           type: string
@@ -2147,12 +2162,13 @@ components:
           type: integer
           description: Уникальный идентификатор стажировки
       required:
-        - id
+        - username
         - traineeship_id
       x-stoplight:
         id: 1qsagwkblx6tc
     CreateTraineeship:
       type: object
+      description: Создание стажировки
       x-stoplight:
         id: 5uzbvfh5svfwb
       properties:
@@ -2176,10 +2192,10 @@ components:
         - title
         - duration
         - start
-        - name
         - description
     UpdateTraineeship:
       type: object
+      description: Добавление руководителя стажировки
       x-stoplight:
         id: cxk1fbzh8qlmh
       properties:
@@ -2191,6 +2207,7 @@ components:
         - supervisor_id
     CustomUserCreate:
       type: object
+      description: Регистрация пользователя
       properties:
         id:
           type: integer
@@ -2206,25 +2223,34 @@ components:
       x-stoplight:
         id: ijvtp02sy2h0o
     TokenCreate:
+      description: Модель для получения токена
       type: object
       properties:
         username:
           type: string
+          description: Уникальный идентификатор в виде номера телефона
+          pattern: '^(7+([0-9]){10})$'
+          example: '79000000000'
         password:
           type: string
+          description: Пароль
       x-stoplight:
         id: 29umaezrysv8q
     TokenGetResponse:
+      description: Данные для авторизации
       type: object
       properties:
         token:
           type: string
+          description: Токен, который нам нужно будет отправлять в шапке каждого запроса, для получения данных в ответ
           example: token
         expires_in:
           type: integer
+          description: Время жизни токена в секундах
           example: 86400
         token_type:
           type: string
+          description: Тип токена
           example: bearer
       x-stoplight:
         id: fli1mbbtl5prj
