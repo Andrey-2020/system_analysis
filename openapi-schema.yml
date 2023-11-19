@@ -1,15 +1,15 @@
 openapi: 3.0.0
 x-stoplight:
-  id: qayq6uwh5oi0j
+  id: 3lv3j504vs43f
 info:
   title: Traineeship system
   version: 1.0.0
 paths:
-  /api/users/:
+  /api/users:
     get:
       summary: Получение списка пользователей
       operationId: Список пользователей
-      description: Выдача всех пользователей для отображения на странице поиска. Доступно ментору, руководителю стажировки и администратору.
+      description: 'Выдача всех пользователей для отображения на странице поиска. Доступно ментору, руководителю стажировки и администратору.'
       parameters:
         - name: page
           required: false
@@ -23,7 +23,7 @@ paths:
           description: Количество объектов на странице.
           schema:
             type: integer
-        - name: author
+        - name: filter
           required: false
           in: query
           description: Показывать пользователей с указанным ФИО
@@ -36,8 +36,26 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/UserAD'
+                $ref: '#/components/schemas/UserSearchResultList'
           description: Список пользователей
+        '400':
+          description: 'В запросе есть ошибка (Например, если filter содержит недопустимые данные)'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ValidationError'
+              examples:
+                Example 1:
+                  value:
+                    fields:
+                      - 'Поле filter не соответствует pattern \A[а-яА-Я]\z'
+                      - При установке флага filter=true поле filter должно быть задано
+        '401':
+          $ref: '#/components/responses/AuthenticationError'
+        '403':
+          $ref: '#/components/responses/PermissionDenied'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
       tags:
         - Пользователи
     post:
@@ -60,12 +78,25 @@ paths:
                 $ref: '#/components/schemas/CustomUserCreate'
           description: Пользователь успешно создан
         '400':
-          $ref: '#/components/responses/ValidationError'
+          description: 'В запросе есть ошибка (Например, если filter содержит недопустимые данные)'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ValidationError'
+              examples:
+                Example 1:
+                  value:
+                    fields:
+                      - Поле phone_number обязательное
+        '401':
+          $ref: '#/components/responses/AuthenticationError'
         '403':
           $ref: '#/components/responses/PermissionDenied'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
       tags:
         - Пользователи
-  /api/users/me/:
+  /api/users/me:
     get:
       summary: Текущий пользователь
       operationId: Текущий пользователь
@@ -78,13 +109,17 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/User'
+                allOf:
+                  - $ref: '#/components/schemas/UserInfo'
+                  - $ref: '#/components/schemas/UserRoleList'
           description: ''
         '401':
           $ref: '#/components/responses/AuthenticationError'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
       tags:
         - Пользователи
-  /api/users/candidates/:
+  /api/users/candidates:
     get:
       summary: Список кандидатов на стажировку
       operationId: Все кандидаты
@@ -115,17 +150,15 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/FormsDecisionsList'
+                $ref: '#/components/schemas/FormDecisionList'
               examples:
                 Example 1:
                   value:
                     count: 100
-                    next: 'http://internship.example.org/api/users/candidates/?page=4'
-                    previous: 'http://internship.example.org/api/users/candidates/?page=2'
                     results:
                       - info:
                           id: 0
-                          username: '79000000000'
+                          phone_number: '79000000000'
                           first_name: Вася
                           last_name: Пупкин
                           middle_name: Алибабаевич
@@ -136,20 +169,22 @@ paths:
                           - id: 0
                             username: string
                             traineeship_id: 0
-                            questios_id: 0
+                            question_id: 0
                             answer_text/link: 'https://docs.google.com/document/u/0/'
                         status_from_supervisor:
-                          status: Нет статуса. Кандидата не проверял руководитель стажировки
-                          description: None
+                          status: NONE
+                          description: NONE
                         status_from_SS:
-                          status: Нет статуса. Кандидат не отправлялся в СБ
+                          status: NONE
                           description: None
           description: ''
         '401':
           $ref: '#/components/responses/AuthenticationError'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
       tags:
         - Пользователи
-  '/api/users/candidates/{id}/':
+  '/api/users/candidates/{id}/status':
     patch:
       summary: Обновление статуса кандидата
       operationId: Добавить статус от руководителя стажировки
@@ -168,21 +203,20 @@ paths:
           application/json:
             schema:
               allOf:
-                - $ref: '#/components/schemas/FormsDecisionsUpdate'
-            examples: {}
+                - $ref: '#/components/schemas/FormDecisionUpdate'
       responses:
         '200':
           content:
             application/json:
               schema:
                 allOf:
-                  - $ref: '#/components/schemas/FormsDecisions'
+                  - $ref: '#/components/schemas/FormDecision'
               examples:
                 Example 1:
                   value:
                     info:
                       id: 0
-                      username: '79000000000'
+                      phone_number: '79000000000'
                       first_name: Вася
                       last_name: Пупкин
                       middle_name: Алибабаевич
@@ -193,20 +227,24 @@ paths:
                       - id: 0
                         username: string
                         traineeship_id: 0
-                        questios_id: 0
+                        question_id: 0
                         answer_text/link: 'https://docs.google.com/document/u/0/'
                     status_from_supervisor:
-                      status: Одобрено
-                      description: string
+                      status: APPROVED
+                      description: Все отлично!
                     status_from_SS:
-                      status: Нет статуса. Кандидат не отправлялся в СБ
+                      status: NONE
                       description: None
           description: ''
         '401':
           $ref: '#/components/responses/AuthenticationError'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
       tags:
         - Пользователи
-  '/api/users/{id}/':
+  '/api/users/{id}':
     get:
       summary: Получение профиля
       operationId: Профиль пользователя
@@ -225,15 +263,17 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/User'
+                $ref: '#/components/schemas/UserInfo'
           description: ''
         '401':
           $ref: '#/components/responses/AuthenticationError'
         '404':
           $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
       tags:
         - Пользователи
-  '/api/users/{id}/role/':
+  '/api/users/{id}/role':
     post:
       summary: Добавить пользователю роль
       operationId: Роль
@@ -244,7 +284,7 @@ paths:
         - name: id
           in: path
           required: true
-          description: Уникальный идентификатор этого пользователя.
+          description: Уникальный идентификатор пользователя.
           schema:
             type: string
       requestBody:
@@ -255,43 +295,49 @@ paths:
               properties:
                 traineeship_id:
                   type: integer
+                  description: Уникальный идентификатор стажировки
                 role:
                   type: string
                   description: Роль пользователя
-                  example: Стажер
+                  example: INTERN
                   enum:
-                    - Стажер
-                    - Ментор
-                    - Руководитель стажировки
-                    - Администратор
+                    - INTERN
+                    - MENTOR
+                    - INTERNSHIP SUPERVISOR
+                    - ADMIN
               required:
-                - username
+                - traineeship_id
+                - role
       responses:
         '201':
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/User'
+                allOf:
+                  - $ref: '#/components/schemas/UserInfo'
+                  - $ref: '#/components/schemas/UserRoleList'
           description: Подписка успешно создана
         '400':
           description: 'Ошибка назначения роли (Например, если роль уже назначена)'
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/SelfMadeError'
+                $ref: '#/components/schemas/ValidationError'
         '401':
           $ref: '#/components/responses/AuthenticationError'
         '403':
           $ref: '#/components/responses/PermissionDenied'
         '404':
           $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
       tags:
         - Управление стажерами и менторами
-  '/api/users/{id}/matching/':
+  '/api/users/{id}/matching':
     post:
       summary: Назначить стажера под конкретного ментора
       operationId: Назначить стажеру ментора
-      description: Доступно только руководителю стажировки
+      description: Назначение стажера под конкретного ментора доступно только руководителю стажировки
       security:
         - Token: []
       parameters:
@@ -311,48 +357,50 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Intern'
+                allOf:
+                  - $ref: '#/components/schemas/UserInfo'
+                  - $ref: '#/components/schemas/UserRoleList'
+                  - $ref: '#/components/schemas/InternWithMentorList'
           description: Подписка успешно создана
         '400':
           description: 'Ошибка назначения ментора (Например, если стажеру для данной стажировки уже назначен ментор)'
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/SelfMadeError'
+                $ref: '#/components/schemas/ValidationError'
+              examples:
+                Example 1:
+                  value:
+                    fields:
+                      - Стажеру для данной стажировки уже назначен ментор
         '401':
           $ref: '#/components/responses/AuthenticationError'
         '403':
           $ref: '#/components/responses/PermissionDenied'
         '404':
           $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
       tags:
         - Управление стажерами и менторами
-  /api/projects/:
+  /api/projects:
     get:
       summary: 'Все шаблоны лендингов, форм и программ стажировок'
       operationId: Конструктор
-      description: Получить шаблоны лендингов. Доступно только администратору.
+      description: Получение и просмотр шаблонов проектов. Получение шаблонов анонсов и программ стажировок доступно только администратору. Получение шаблонов форм также разрешено руководителю стажировки и ментору.
       security:
-        - Token:
-            - admin
         - Token: []
       parameters:
         - name: purpose
           required: false
           in: query
-          description: Количество объектов на странице.
+          description: 'Цель использования конструктора. Создание формы, анонса или программы стажировки?'
           schema:
             type: string
             enum:
-              - Только форма
-              - Анонс
-              - Программа стажировки
-        - name: addnewpage
-          required: false
-          in: query
-          description: Создать новую страницу?
-          schema:
-            type: boolean
+              - ONLY FORM
+              - ANNOUNCEMENT
+              - TRAINEESHIP PROGRAM
         - name: page
           required: false
           in: query
@@ -370,7 +418,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Templates'
+                $ref: '#/components/schemas/TemplatePreviewList'
           description: Все шаблоны страницы
         '401':
           $ref: '#/components/responses/AuthenticationError'
@@ -378,16 +426,16 @@ paths:
           $ref: '#/components/responses/PermissionDenied'
         '404':
           $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
       tags:
         - Конструктор
-  '/api/projects/{projectid}/':
+  '/api/projects/{project_id}':
     get:
       summary: Получить шаблон проекта
       operationId: Шаблон проекта
-      description: Получить шаблон проекта
+      description: Получение конкретного шаблона анонса или программы стажировоки доступно только администратору. Получение шаблона формы также разрешено руководителю стажировки и ментору.
       security:
-        - Token:
-            - admin
         - Token: []
       parameters:
         - name: purpose
@@ -397,10 +445,10 @@ paths:
           schema:
             type: string
             enum:
-              - Только форма
-              - Анонс
-              - Программа стажировки
-        - name: projectid
+              - ONLY FORM
+              - ANNOUNCEMENT
+              - TRAINEESHIP PROGRAM
+        - name: project_id
           in: path
           required: true
           description: Уникальный индентификатор проекта
@@ -421,17 +469,20 @@ paths:
           description: 'Сообщение содержит HTML-разметку, а также необходимые библиотеки CSS-стилей и библиотеки JS-модулей.'
         '401':
           $ref: '#/components/responses/AuthenticationError'
+        '403':
+          $ref: '#/components/responses/PermissionDenied'
         '404':
           $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
       tags:
         - Конструктор
     post:
       summary: 'Создать анонс, форму или программу стажировки'
       operationId: Создать анонс стажировки
-      description: Создать анонс стажировки в конструкторе
+      description: 'Создание конкретного шаблона анонса, программы стажировоки, формы. Разрешения для пользователей как при GET-запросе.'
       security:
-        - Token:
-            - admin
+        - Token: []
       parameters:
         - name: purpose
           required: true
@@ -440,10 +491,10 @@ paths:
           schema:
             type: string
             enum:
-              - Только форма
-              - Анонс
-              - Программа стажировки
-        - name: projectid
+              - ONLY FORM
+              - ANNOUNCEMENT
+              - TRAINEESHIP PROGRAM
+        - name: project_id
           in: path
           required: true
           description: Уникальный индентификатор проекта
@@ -453,7 +504,23 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/ProjectsCreate'
+              $ref: '#/components/schemas/CreateProject'
+            examples:
+              Example 1:
+                value:
+                  template_id: 0
+                  title: Стажировка по системной аналитике
+                  blocks:
+                    - 'sorts[0]':
+                        block_id: '668483038'
+                        changes:
+                          - only_this_field: title
+                            element_info: Новый заголовок формы
+                    - 'sorts[1]':
+                        block_id: '668482970'
+                        changes:
+                          - only_this_field: li_title_1
+                            element_info: E-mail
       responses:
         '201':
           content:
@@ -467,9 +534,11 @@ paths:
               schema:
                 allOf:
                   - $ref: '#/components/schemas/ValidationError'
-                example:
-                  block:
-                    - Блок "form" с id "668483038" содержит недопустимые значения
+              examples:
+                Example 1:
+                  value:
+                    fields:
+                      - Блок form с id '668483038' содержит недопустимые значения
           description: Невозможно обработать запрос
         '401':
           $ref: '#/components/responses/AuthenticationError'
@@ -477,9 +546,11 @@ paths:
           $ref: '#/components/responses/PermissionDenied'
         '404':
           $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
       tags:
         - Конструктор
-  '/api/announcements/{id}/':
+  '/api/announcements/{id}':
     get:
       summary: Получение страницы анонса стажировки
       operationId: Получение лендинга
@@ -494,12 +565,18 @@ paths:
       responses:
         '200':
           content:
+            application/xhtml+xml:
+              schema:
+                type: object
+                properties: {}
             application/json:
               schema:
                 $ref: '#/components/schemas/Template'
-          description: ''
+          description: 'Получена страница анонса, сформированная по шаблону'
         '404':
           $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
       tags:
         - Анонсы
     post:
@@ -518,7 +595,7 @@ paths:
           application/json:
             schema:
               allOf:
-                - $ref: '#/components/schemas/Candidate'
+                - $ref: '#/components/schemas/UserInfo'
                 - $ref: '#/components/schemas/IntroductoryTasks'
       responses:
         '201':
@@ -531,7 +608,7 @@ paths:
                     type: string
                     description: Уникальный юзернейм
                     pattern: '^(7+([0-9]){10})$'
-                    maxLength: 150
+                    maxLength: 15
                     example: '79000000000'
                   message:
                     type: string
@@ -542,9 +619,11 @@ paths:
           $ref: '#/components/responses/ValidationError'
         '409':
           $ref: '#/components/responses/ConflictError'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
       tags:
         - Анонсы
-  '/api/traineeships/{traineeship_id}/lectures/':
+  '/api/traineeships/{traineeship_id}/lectures':
     get:
       summary: Получить все лекции
       operationId: Список лекций
@@ -575,10 +654,12 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/LecturesList'
+                $ref: '#/components/schemas/LectureList'
           description: Список лекций
         '404':
           $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
       tags:
         - Лекции
     post:
@@ -598,16 +679,16 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/LecturesCreate'
+              $ref: '#/components/schemas/CreateLecture'
       responses:
         '201':
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/LecturesMinified'
-          description: Рецепт успешно создан
+                $ref: '#/components/schemas/LectureMinified'
+          description: Лекция успешно создана
         '400':
-          description: Ошибки валидации в стандартном формате DRF
+          description: Ошибки валидации в стандартном формате
           content:
             application/json:
               schema:
@@ -626,9 +707,11 @@ paths:
           $ref: '#/components/responses/PermissionDenied'
         '404':
           $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
       tags:
         - Лекции
-  '/api/traineeships/{traineeship_id}/lectures/{lecture_id}/':
+  '/api/traineeships/{traineeship_id}/lectures/{lecture_id}':
     get:
       summary: Зайти в карточку лекции
       operationId: Получение лекции
@@ -653,10 +736,12 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Lectures'
+                $ref: '#/components/schemas/Lecture'
           description: ''
         '404':
           $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
       tags:
         - Лекции
     patch:
@@ -688,24 +773,28 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Lectures'
+                $ref: '#/components/schemas/Lecture'
           description: Лекция успешно обновлена
         '400':
-          description: Ошибки валидации в стандартном формате JSF.
+          description: Ошибки валидации в стандартном формате
           content:
             application/json:
               schema:
                 allOf:
                   - $ref: '#/components/schemas/ValidationError'
-                example:
-                  link_presentation:
-                    - Содержит некорректные данные.
+              examples:
+                Example 1:
+                  value:
+                    fields:
+                      - Поле link_presentation не соответствует pattern url
         '401':
           $ref: '#/components/responses/AuthenticationError'
         '403':
           $ref: '#/components/responses/PermissionDenied'
         '404':
           $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
       tags:
         - Лекции
   '/api/traineeships/{traineeship_id}/lectures/{lecture_id}/homeworks':
@@ -746,11 +835,13 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/HomeworksList'
+                $ref: '#/components/schemas/HomeworksWithLecture'
         '401':
           $ref: '#/components/responses/AuthenticationError'
         '404':
           $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
       tags:
         - Домашние задания
     post:
@@ -776,29 +867,36 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/HomeworksCreate'
+              $ref: '#/components/schemas/CreateHomeworks'
       responses:
         '201':
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Homeworks'
+                $ref: '#/components/schemas/Homework'
           description: ДЗ успешно создано
         '400':
           description: 'Ошибка добавления ДЗ к лекции (Например, когда такое ДЗ в лекции уже существует)'
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/SelfMadeError'
+                $ref: '#/components/schemas/ValidationError'
+              examples:
+                Example 1:
+                  value:
+                    fields:
+                      - Данное ДЗ уже создано
         '401':
           $ref: '#/components/responses/AuthenticationError'
         '403':
           $ref: '#/components/responses/PermissionDenied'
         '404':
           $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
       tags:
         - Домашние задания
-  '/api/traineeships/{traineeship_id}/lectures/{lecture_id}/homeworks/{id}/':
+  '/api/traineeships/{traineeship_id}/lectures/{lecture_id}/homeworks/{id}':
     get:
       summary: Получить конкретное ДЗ
       operationId: ДЗ
@@ -830,14 +928,16 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Homeworks'
+                $ref: '#/components/schemas/Homework'
         '401':
           $ref: '#/components/responses/AuthenticationError'
         '404':
           $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
       tags:
         - Домашние задания
-  '/api/traineeships/{traineeship_id}/lectures/{lecture_id}/homeworks/{homework_id}/decisions/':
+  '/api/traineeships/{traineeship_id}/lectures/{lecture_id}/homeworks/{homework_id}/decisions':
     post:
       summary: Прикрепить решение к ДЗ
       operationId: Отправка решения ДЗ
@@ -867,24 +967,31 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/HomeworksDecisionsCreate'
+              $ref: '#/components/schemas/CreateHomeworkDecision'
       responses:
         '201':
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/HomeworksDecisions'
-          description: Рецепт успешно добавлен в список покупок
+                $ref: '#/components/schemas/HomeworkDecisions'
+          description: ДЗ успешно отправлено на проверку
         '400':
           description: 'Ошибка добавления ДЗ (Например, когда ДЗ уже отправлено)'
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/SelfMadeError'
+                $ref: '#/components/schemas/ValidationError'
+              examples:
+                Example 1:
+                  value:
+                    fields:
+                      - Решение ДЗ уже отправлено
         '401':
           $ref: '#/components/responses/AuthenticationError'
         '404':
           $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
       tags:
         - Домашние задания
   '/api/traineeships/{traineeship_id}/lectures/{lecture_id}/homeworks/{homework_id}/decisions/{id}':
@@ -925,9 +1032,11 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/HomeworksDecisions'
+                $ref: '#/components/schemas/HomeworkDecisions'
         '401':
           $ref: '#/components/responses/AuthenticationError'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
       tags:
         - Домашние задания
     patch:
@@ -965,27 +1074,39 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/HomeworksDecisionsUpdate'
+              $ref: '#/components/schemas/UpdateHomeworkDecision'
       responses:
         '200':
           content:
             application/json:
               schema:
                 allOf:
-                  - $ref: '#/components/schemas/HomeworksDecisions'
-                  - $ref: '#/components/schemas/HomeworksDecisionsUpdate'
+                  - $ref: '#/components/schemas/HomeworkDecisions'
+                  - $ref: '#/components/schemas/UpdateHomeworkDecision'
           description: Лекция успешно обновлена
         '400':
-          $ref: '#/components/responses/NestedValidationError'
+          description: Ошибки валидации в стандартном формате
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ValidationError'
+              examples:
+                Example 1:
+                  value:
+                    fields:
+                      - 'Убедитесь, что значение поля assessment больше либо равно 1'
         '401':
           $ref: '#/components/responses/AuthenticationError'
         '403':
           $ref: '#/components/responses/PermissionDenied'
         '404':
           $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
       tags:
         - Домашние задания
-  /api/traineeships/liga-security/:
+  /api/traineeships/liga-security:
     get:
       summary: Обновить статус кандидата
       operationId: Запросить статусы
@@ -1010,6 +1131,8 @@ paths:
           $ref: '#/components/responses/AuthenticationError'
         '403':
           $ref: '#/components/responses/PermissionDenied'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
       tags:
         - Служба безопасности
     post:
@@ -1038,11 +1161,18 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/SelfMadeError'
+                $ref: '#/components/schemas/ValidationError'
+              examples:
+                Example 1:
+                  value:
+                    fields:
+                      - Данный пользователь уже отправлен на проверку в СБ
         '401':
           $ref: '#/components/responses/AuthenticationError'
         '403':
           $ref: '#/components/responses/PermissionDenied'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
       tags:
         - Служба безопасности
   /api/traineeships/hr/employees:
@@ -1072,16 +1202,23 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/SelfMadeError'
+                $ref: '#/components/schemas/ValidationError'
+              examples:
+                Example 1:
+                  value:
+                    fields:
+                      - Данный пользователь уже отправлен на проверку
         '401':
           $ref: '#/components/responses/AuthenticationError'
         '403':
           $ref: '#/components/responses/PermissionDenied'
         '404':
           $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
       tags:
         - HR
-  /api/traineeships/:
+  /api/traineeships:
     post:
       summary: Создать стажировку
       operationId: Создание стажировки
@@ -1093,7 +1230,7 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/TraineeshipsCreate'
+              $ref: '#/components/schemas/CreateTraineeship'
       responses:
         '201':
           content:
@@ -1104,20 +1241,29 @@ paths:
                 description: Ответ от сервера
           description: Стажировка успешно создана
         '400':
-          description: 'Ошибка подписки (Например, если уже подписан или при подписке на себя самого)'
+          description: Ошибки валидации в стандартном формате
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/SelfMadeError'
+                $ref: '#/components/schemas/ValidationError'
+              examples:
+                Example 1:
+                  value:
+                    fields:
+                      - 'Поле title не соответствует pattern \A[а-яА-Я]\z'
+                      - 'Поле start не соответствует pattern [0-9]{4}-(0[1-9]|1[012])-(0[1-9]|1[0-9]|2[0-9]|3[01])'
+                      - 'Убедитесь, что значение поля duration больше либо равно 1'
         '401':
           $ref: '#/components/responses/AuthenticationError'
         '403':
           $ref: '#/components/responses/PermissionDenied'
         '404':
           $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
       tags:
         - Стажировка
-  '/api/traineeships/{traineeship_id}/':
+  '/api/traineeships/{traineeship_id}':
     patch:
       summary: Добавить руководителя стажировки
       operationId: Назначение руководителя
@@ -1135,22 +1281,27 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/TraineeshipsCreateUpdate'
+              $ref: '#/components/schemas/UpdateTraineeship'
       responses:
         '201':
           content:
             application/json:
               schema:
                 allOf:
-                  - $ref: '#/components/schemas/TraineeshipsCreate'
-                  - $ref: '#/components/schemas/TraineeshipsCreateUpdate'
+                  - $ref: '#/components/schemas/CreateTraineeship'
+                  - $ref: '#/components/schemas/UpdateTraineeship'
           description: Стажировка успешно создана
         '400':
           description: 'Ошибка назначения (Например, если id руководителя не существует)'
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/SelfMadeError'
+                $ref: '#/components/schemas/ValidationError'
+              examples:
+                Example 1:
+                  value:
+                    fields:
+                      - 'ID, указанный в supervisor_id, не существует.'
         '401':
           $ref: '#/components/responses/AuthenticationError'
         '403':
@@ -1159,13 +1310,13 @@ paths:
           $ref: '#/components/responses/NotFound'
       tags:
         - Стажировка
-  '/api/traineeships/{traineeship_id}/programs/{id}/':
+  '/api/traineeships/{traineeship_id}/programs/{id}':
     get:
-      security:
-        - Token: []
       summary: Скачать программу стажировки
       operationId: Скачать програму стажировки
       description: 'Скачать файл с программой стажировки. Это может быть TXT/PDF/CSV. Важно, чтобы контент файла удовлетворял требованиям задания. Доступно стажерам, менторам, руководителю стажировки и админам.'
+      security:
+        - Token: []
       parameters:
         - name: traineeship_id
           in: path
@@ -1195,7 +1346,7 @@ paths:
           $ref: '#/components/responses/AuthenticationError'
       tags:
         - Стажировка
-  /api/auth/token/login/:
+  /api/auth/token/login:
     post:
       summary: Получить токен авторизации
       operationId: Получить токен авторизации
@@ -1215,11 +1366,13 @@ paths:
           description: ''
       tags:
         - Пользователи
-  /api/auth/token/logout/:
+  /api/auth/token/logout:
     post:
       summary: Удаление токена
       operationId: Удаление токена
       description: Удаляет токен текущего пользователя
+      security:
+        - Token: []
       parameters: []
       requestBody:
         content:
@@ -1237,16 +1390,16 @@ paths:
         - Пользователи
 components:
   schemas:
-    Candidate:
-      description: Полные данные стажера
+    UserInfo:
+      description: Полные данные пользователя (в том числе кандидата на стажировку)
       type: object
       properties:
         id:
           type: integer
           readOnly: true
-        username:
+        phone_number:
           type: string
-          description: Уникальный идентификатор в виде номера телефона
+          description: Номера телефона
           pattern: '^(7+([0-9]){10})$'
           example: '79000000000'
           maxLength: 15
@@ -1279,7 +1432,7 @@ components:
           maxLength: 254
           description: Адрес электронной почты
       required:
-        - username
+        - phone_number
         - first_name
         - last_name
         - middle_name
@@ -1287,107 +1440,44 @@ components:
         - birthday
         - email
       x-stoplight:
-        id: q5a5d3tuqz6sv
-    IntroductoryTasks:
-      description: Решение вступительных задач
-      type: object
-      properties:
-        traineeship_id:
-          type: integer
-          description: Уникальный id стажировки
-        tasks:
-          type: array
-          description: Список задач
-          items:
-            type: object
-            properties:
-              task_id:
-                type: integer
-                description: Уникальный id задачи
-              solution:
-                type: string
-                description: Текстовое описание решения или ссылка на онлайн ресурс с решением
-                example: 'https://docs.google.com/document/u/0/'
-      required:
-        - tasks
-      x-stoplight:
-        id: nf7ijiig9xr7d
-    User:
-      description: Текущий пользователь для отображения в ЛК
-      type: object
-      properties:
-        schema:
-          $ref: '#/components/schemas/Candidate'
-        role:
-          type: string
-          description: Роль пользователя в системе
-          example: Стажер
-      required:
-        - username
+        id: cwploezm4a2zx
+    UserRoleList:
+      description: Список ролей пользователя в различных стажировках
       x-stoplight:
         id: qcweyjbn1jnat
-    UserAD:
       type: object
       properties:
-        count:
-          type: integer
-          example: 123
-          description: Общее количество объектов в базе
-        next:
-          type: string
-          nullable: true
-          format: uri
-          example: 'http://internship.example.org/api/users/?page=4'
-          description: Ссылка на следующую страницу
-        previous:
-          type: string
-          nullable: true
-          format: uri
-          example: 'http://internship.example.org/api/users/?page=2'
-          description: Ссылка на предыдущую страницу
-        results:
+        roles:
           type: array
-          items:
-            $ref: '#/components/schemas/UserSearch'
-          description: Список объектов текущей страницы
-      x-stoplight:
-        id: 9awt556dl9yuq
-    Intern:
-      description: Полные данные стажера
-      type: object
-      properties:
-        schema:
-          $ref: '#/components/schemas/Candidate'
-        role:
-          type: string
-          description: Роль пользователя в системе
-          example: Стажер
-        mentors:
-          type: array
-          description: Список соответствий стажировка - ментор для конкретного стажера
+          description: Список ролей пользователя в различных стажировках
           items:
             type: object
             properties:
               traineeship_id:
                 type: integer
-                description: Уникальный id стажировки
-              mentor_id:
-                type: integer
-                description: Уникальный id ментора
+                description: Уникальный идентификатор стажировки
+              role:
+                description: Роль пользователя в системе
+                example: INTERN
+                enum:
+                  - INTERN
+                  - MENTOR
+                  - INTERNSHIP SUPERVISOR
+                  - ADMIN
       required:
-        - username
-      x-stoplight:
-        id: zbaj17jeuf9aq
-    UserSearch:
+        - roles
+    UserSearchResult:
       description: Пользователь из БД AD
+      x-stoplight:
+        id: r073yipmhqp0x
       type: object
       properties:
         id:
           type: integer
           readOnly: true
-        username:
+        phone_number:
           type: string
-          description: Уникальный юзернейм в виде номера телефона
+          description: Номера телефона
           pattern: '^(7+([0-9]){10})$'
           maxLength: 15
         first_name:
@@ -1407,72 +1497,114 @@ components:
           example: Алибабаевич
       required:
         - username
+    UserSearchResultList:
+      type: object
       x-stoplight:
-        id: r073yipmhqp0x
-    InternWithMentor:
-      description: Расширенный объект пользователя с рецептами
+        id: 9awt556dl9yuq
+      description: 'Список пользователей с БД, удовлетворяющих запросу'
+      properties:
+        count:
+          type: integer
+          example: 123
+          description: Общее количество объектов в базе
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/UserSearchResult'
+          description: Список объектов текущей страницы
+    IntroductoryTasks:
+      description: Решение вступительных задач кандидата на стажировку
       type: object
       properties:
-        id:
-          type: integer
-          readOnly: true
         traineeship_id:
           type: integer
-        mentor_id:
-          type: integer
+          description: Уникальный id стажировки
+        tasks:
+          type: array
+          description: Список задач
+          items:
+            type: object
+            properties:
+              task_id:
+                type: integer
+                description: Уникальный id задачи
+              username:
+                type: integer
+                description: Уникальный id стажера
+              solution:
+                type: string
+                description: Текстовое описание решения или ссылка на онлайн ресурс с решением
+                example: 'https://docs.google.com/document/u/0/'
+      required:
+        - tasks
       x-stoplight:
-        id: dit0womviu4k4
-    Templates:
+        id: 5fevjeccjjwdb
+    InternWithMentor:
+      description: 'Дополнительная информация по стажеру, сожержащая его ментора для конкретной стажировки'
       type: object
       properties:
         id:
           type: integer
           readOnly: true
           description: Уникальный id
+        username:
+          type: integer
+          description: Уникальный id стажера
+        traineeship_id:
+          type: integer
+          description: Уникальный id стажировки
+        mentor_id:
+          type: integer
+          description: Уникальный id ментора
+      required:
+        - username
+        - traineeship_id
+        - mentor_id
+    InternWithMentorList:
+      description: 'Список всех менторов стажера, сгруппированных по его стажировкам (подгружать эту информацию как lazy load)'
+      x-stoplight:
+        id: dit0womviu4k4
+      type: object
+      properties:
+        mentors:
+          type: array
+          description: Список соответствий стажировка - ментор для конкретного стажера
+          items:
+            $ref: '#/components/schemas/InternWithMentor'
+      required:
+        - username
+    TemplatePreviewList:
+      type: object
+      x-stoplight:
+        id: 3al2xw7dofl3m
+      description: Предпросмотр шаблонов для выбора
+      properties:
         count:
           type: integer
           description: Количество шаблонов
-        template:
-          type: object
-          properties:
-            id:
-              type: integer
-              readOnly: true
-              description: Уникальный id шаблона
-            count:
-              type: integer
-              description: Количество шаблонов
-            template:
-              description: Список шаблонов
-              type: array
-              items:
-                $ref: '#/components/schemas/TemplateList'
+        templates:
+          type: array
+          description: Список шаблонов
+          items:
+            type: object
+            properties:
+              template_id:
+                type: integer
+                description: Уникальный id шаблона
+              image_ling:
+                type: string
+                description: Ссылка на изобращение шаблона
+                example: 'http://internship.example.org/static/example.jpg'
+                format: url
+              text:
+                description: Описание
+                type: string
       required:
         - count
-        - template
-      x-stoplight:
-        id: fv5x8kis98utg
-    TemplateList:
-      type: object
-      properties:
-        template_id:
-          type: integer
-          description: Уникальный id шаблона
-        image_ling:
-          type: string
-          description: Ссылка на изобращение шаблона
-          example: 'http://internship.example.org/static/example.jpg'
-          format: url
-        text:
-          description: Описание
-          type: string
-      required:
-        - count
-        - template
-      x-stoplight:
-        id: 3al2xw7dofl3m
+        - templates
     Template:
       type: object
+      description: 'Шаблон проекта, содержащий его разметку'
       properties:
         template_id:
           type: integer
@@ -1493,24 +1625,30 @@ components:
         - count
         - template
       x-stoplight:
-        id: urs1cygd4vegv
-    ProjectsCreate:
+        id: s1iz093gq653d
+    CreateProject:
       type: object
+      description: 'Модель для создания проекта (например, анонса) по готовым дизайн блокам из библиотеки. Блок - обложка, заголовок, текстовый блок, изображение и так далее'
+      x-stoplight:
+        id: v3xsexsmb92ku
       properties:
-        projectid:
+        template_id:
           type: integer
+          description: Уникальный идентификатор шаблона
         title:
           type: string
           description: Заголовок
           example: Стажировка по системной аналитике
         blocks:
           type: array
+          description: 'Список блоков, сохраняющий определенный порядок.'
           items:
             type: object
+            description: 'Дизайн блок. Цефра в [ ] отвечает за место отображения на странице'
             properties:
               'sorts[0]':
                 type: object
-                description: Блок с определенным порядком
+                description: 'sorts[0] обозначает первый блок на странице'
                 properties:
                   block_id:
                     type: string
@@ -1518,51 +1656,45 @@ components:
                     example: '668483038'
                   changes:
                     type: array
-                    description: Список всех изменений элементов блока
+                    description: Список всех изменений в дизайн блоке
                     items:
                       type: object
+                      description: Элементы блока block_id
                       properties:
                         only_this_field:
                           type: string
                           description: Уникальный идентификатор элемента блока
                           example: title
-                        block_info:
+                        element_info:
                           type: string
-                          description: Текст элемента
-                          example: Заголовок формы
-              'sorts[1]':
-                type: object
-                description: Блок с определенным порядком
-                properties:
-                  block_id:
-                    type: string
-                    description: Уникальный идентификатор блока
-                    example: '668482970'
-                  changes:
-                    type: array
-                    description: Список всех изменений элементов блока
-                    items:
-                      type: object
-                      properties:
-                        only_this_field:
-                          type: string
-                          description: Уникальный идентификатор элемента блока
-                          example: li_title_1
-                        block_info:
-                          type: string
-                          description: Текст элемента
-                          example: E-mail
+                          description: Измененный текст элемента блока
+                          example: Новый заголовок формы
       required:
-        - projectid
+        - template_id
         - title
         - blocks
-      x-stoplight:
-        id: v3xsexsmb92ku
+      x-examples:
+        Example 1:
+          template_id: 0
+          title: Стажировка по системной аналитике
+          blocks:
+            - 'sorts[0]':
+                block_id: '668483038'
+                changes:
+                  - only_this_field: title
+                    element_info: Новый заголовок формы
+            - 'sorts[1]':
+                block_id: '668482970'
+                changes:
+                  - only_this_field: li_title_1
+                    element_info: E-mail
     AnnouncementsResponseOnCreate:
       type: object
+      description: Ответ сервера при создании анонса
       properties:
-        projectid:
+        project_id:
           type: integer
+          description: Уникальный идентификатор анонса
         link:
           type: string
           description: Ссылка на лендинг
@@ -1573,13 +1705,32 @@ components:
           description: Страница уже опубликована в открытом доступе?
           example: true
       required:
-        - projectid
+        - project_id
         - link
         - publish_onepage
       x-stoplight:
-        id: npc1tn8hcwte1
-    LecturesMinified:
+        id: 312hxmdgtkvoa
+    CreateLecture:
+      description: 'Объект, содержащий информацию для создания лекции'
       type: object
+      properties:
+        name:
+          type: string
+          maxLength: 200
+          description: Название лекции
+        date_lecture:
+          description: Дата проведения лекции по расписанию
+          type: string
+          example: '2023-11-17'
+          format: date
+      required:
+        - name
+        - date_lecture
+    LectureMinified:
+      type: object
+      x-stoplight:
+        id: 1gzlfemeqngmh
+      description: Первичная краткая информация о лекции (сразу после её создания)
       properties:
         id:
           type: integer
@@ -1597,10 +1748,11 @@ components:
       required:
         - name
         - date_lecture
-      x-stoplight:
-        id: 1gzlfemeqngmh
-    Lectures:
+    Lecture:
       type: object
+      x-stoplight:
+        id: in07zip1m3uv0
+      description: 'Полная информация о лекции, содержащая название, дату проведения, ссылку на презентацию и запись.'
       properties:
         id:
           type: integer
@@ -1636,35 +1788,18 @@ components:
           format: date
       required:
         - name
+        - link_presentation
+        - link_record
+        - homework_id
         - date_lecture
-      x-stoplight:
-        id: in07zip1m3uv0
-    LecturesList:
+    LectureList:
       type: array
       description: Список лекций
       items:
-        $ref: '#/components/schemas/Lectures'
-      x-stoplight:
-        id: 39xenapkp4t11
-    LecturesCreate:
-      type: object
-      properties:
-        name:
-          type: string
-          maxLength: 200
-          description: Название лекции
-        date_lecture:
-          description: Дата проведения лекции по расписанию
-          type: string
-          example: '2023-11-17'
-          format: date
-      required:
-        - name
-        - date_lecture
-      x-stoplight:
-        id: f65d5n18tfx12
+        $ref: '#/components/schemas/Lecture'
     LecturesUpdate:
       type: object
+      description: Дополнительная информация лекции
       properties:
         image:
           description: Ссылка на картинку на сайте
@@ -1686,63 +1821,78 @@ components:
           type: integer
           example: 2
       required:
+        - image
         - link_presentation
         - link_record
+        - homework_id
       x-stoplight:
-        id: 5q8yl2ojnf21j
-    Homeworks:
+        id: 5g84xaxtfdnab
+    Homework:
       type: object
+      x-stoplight:
+        id: rvczzu20vldkq
+      description: Информация о домашнем задании
       properties:
         id:
           type: integer
           readOnly: true
-        title:
-          type: string
-          maxLength: 200
-          example: Капуста
         traineeship_id:
           type: integer
           description: Уникальный идентификатор стажировки
         lecture_id:
           type: integer
           description: Уникальный идентификатор лекции
-        homework_text:
-          type: string
-          description: Описание ДЗ
-          example: Овощ
         image:
           description: Ссылка на картинку для ДЗ
           example: 'http://internship.example.org/media/lectures/images/DZ.jpeg'
           type: string
           format: url
-        homework_list:
-          type: array
-          description: Список с задачами
-          items:
-            type: object
-            properties:
-              condition:
-                type: string
-                description: Текст вопроса ДЗ
-                example: Помогает ли капуста от облысения?
-              id:
-                type: integer
-                description: Уникальный идентификатор условия задачи
-                example: 1
+        condition:
+          type: string
+          description: Текст вопроса ДЗ
+          example: Помогает ли капуста от облысения?
       required:
-        - name
-        - measurement_unit
-      x-stoplight:
-        id: rvczzu20vldkq
-    HomeworksList:
-      type: array
-      description: Список ДЗ
-      items:
-        $ref: '#/components/schemas/Homeworks'
+        - title
+        - traineeship_id
+        - lecture_id
+        - image
+        - condition
+    HomeworksWithLecture:
+      type: object
       x-stoplight:
         id: th9fpte9bdx9m
-    HomeworksCreate:
+      description: Список домашних задач для данной лекции
+      properties:
+        count:
+          type: integer
+          description: Количество задач
+        title:
+          type: string
+          maxLength: 200
+          description: Заголовок
+          example: Заголовок группы ДЗ
+        description_text:
+          type: string
+          description: Описание
+          example: Описание
+        lecture_id:
+          type: integer
+          description: Уникальный идентификатор лекции
+        homeworks:
+          type: array
+          description: Задачи
+          items:
+            $ref: '#/components/schemas/Homework'
+      required:
+        - count
+        - title
+        - description_text
+        - homeworks
+    CreateHomeworks:
       type: object
+      x-stoplight:
+        id: likgdjb1m8zzi
+      description: Создание ДЗ
       properties:
         id:
           type: integer
@@ -1751,21 +1901,21 @@ components:
           type: string
           maxLength: 200
           example: Капуста
-        homework_text:
+        description_text:
           type: string
           description: Описание ДЗ
           example: Овощ
-        image:
-          description: Ссылка на картинку для ДЗ
-          example: 'http://internship.example.org/media/lectures/images/DZ.jpeg'
-          type: string
-          format: url
         homework_list:
           type: array
           description: Список с задачами
           items:
             type: object
             properties:
+              image:
+                description: Ссылка на картинку для ДЗ
+                example: 'http://internship.example.org/media/lectures/images/DZ.jpeg'
+                type: string
+                format: url
               condition:
                 type: string
                 description: Текст вопроса ДЗ
@@ -1774,12 +1924,14 @@ components:
                 type: integer
                 description: Номер вопроса
                 example: 1
+            required:
+              - condition
+              - number
       required:
-        - name
-        - measurement_unit
-      x-stoplight:
-        id: likgdjb1m8zzi
-    HomeworksDecisions:
+        - title
+        - description_text
+        - homework_list
+    HomeworkDecisions:
       type: object
       properties:
         id:
@@ -1800,16 +1952,20 @@ components:
           type: string
           format: url
       required:
+        - username
+        - traineeship_id
         - homework_id
         - link
       x-stoplight:
-        id: 1enoxawx52o17
-    FormsDecisions:
+        id: 2cff87rfdx3dl
+    FormDecision:
       type: object
-      description: Вся информация о кандидате вместе с его решениями вступительных задач
+      x-stoplight:
+        id: kk0zd3tekydnx
+      description: 'Вся информация о кандидате, включая его решения вступительных задач, предоставляется для принятия решений руководителем стажировки и администратором'
       properties:
         info:
-          $ref: '#/components/schemas/Candidate'
+          $ref: '#/components/schemas/UserInfo'
         tasks:
           type: array
           description: Список ответов кандидата
@@ -1824,20 +1980,20 @@ components:
               traineeship_id:
                 type: integer
                 description: Уникальный идентификатор стажировки
-              questios_id:
+              question_id:
                 type: integer
                 description: Уникальный идентификатор вопроса формы
               answer_text/link:
                 description: Текстовый ответ или ссылка на решение
                 example: 'https://docs.google.com/document/u/0/'
                 type: string
-          required:
-            - username
-            - traineeship_id
-            - questios_id
-            - answer_text/link
+            required:
+              - username
+              - traineeship_id
+              - question_id
+              - answer_text/link
         status_from_supervisor:
-          $ref: '#/components/schemas/FormsDecisionsUpdate'
+          $ref: '#/components/schemas/FormDecisionUpdate'
         status_from_SS:
           type: object
           description: Результаты проверки кандидата руководителем стажировки
@@ -1845,79 +2001,87 @@ components:
             status:
               type: string
               description: Cтатус проверки кандидата от службы безопасности
-              example: Нет статуса. Кандидат не отправлялся в СБ
+              example: NONE
+              enum:
+                - APPROVED
+                - REJECTED
+                - PENDING
+                - NONE
             description:
               type: string
               description: Комментарий от СБ
               example: None
+          required:
+            - status
+            - description
       required:
         - info
         - tasks
-        - questios_id
-        - answer_text/link
-      x-stoplight:
-        id: kk0zd3tekydnx
-      x-examples: {}
-    FormsDecisionsUpdate:
+        - status_from_supervisor
+        - status_from_SS
+    FormDecisionUpdate:
       type: object
-      description: Результаты проверки кандидата руководителем стажировки
+      x-stoplight:
+        id: t4gsh6pg7zykq
+      description: Добавить результат проверки кандидата руководителем стажировки
       properties:
         status:
           type: string
           description: Cтатус проверки кандидата от руководителя стажировки
-          example: Одобрено
+          example: APPROVED
+          enum:
+            - APPROVED
+            - REJECTED
+            - PENDING
+            - NONE
         description:
           type: string
           description: Комментарий от руководителя стажировки
+          example: Все отлично!
       required:
-        - status_from_supervisor
-      x-stoplight:
-        id: t4gsh6pg7zykq
-    FormsDecisionsList:
+        - status
+        - description
+    FormDecisionList:
       type: object
+      x-stoplight:
+        id: kvofk07h0kira
       description: Список кандидатов на стажировку
       properties:
         count:
           type: integer
           example: 100
           description: Общее количество объектов в базе
-        next:
-          type: string
-          nullable: true
-          format: uri
-          example: 'http://internship.example.org/api/users/candidates/?page=4'
-          description: Ссылка на следующую страницу
-        previous:
-          type: string
-          nullable: true
-          format: uri
-          example: 'http://internship.example.org/api/users/candidates/?page=2'
-          description: Ссылка на предыдущую страницу
         results:
           type: array
           items:
-            $ref: '#/components/schemas/FormsDecisions'
+            $ref: '#/components/schemas/FormDecision'
           description: Список объектов текущей страницы
       required:
         - count
-        - next
         - results
-      x-stoplight:
-        id: kvofk07h0kira
-    HomeworksDecisionsCreate:
+    CreateHomeworkDecision:
       type: object
+      x-stoplight:
+        id: etpxe2h9qjwb7
+      description: Добавить решение ДЗ
       properties:
+        username:
+          type: string
+          description: Уникальный идентификатор cтажера
+          example: '79000000000'
         link:
           description: Ссылка на решения ДЗ
           example: 'https://docs.google.com/document/u/0/'
           type: string
           format: url
       required:
+        - username
         - link
-      x-stoplight:
-        id: etpxe2h9qjwb7
-    HomeworksDecisionsUpdate:
+    UpdateHomeworkDecision:
       type: object
+      description: 'Ментор обновляет информацию в домашнем задании стажера, отправляя оценку и комментарий.'
+      x-stoplight:
+        id: h2fwug6nfg0al
       properties:
         mentor_id:
           type: integer
@@ -1932,9 +2096,9 @@ components:
           example: Отлично!
           type: string
       required:
-        - link
-      x-stoplight:
-        id: h2fwug6nfg0al
+        - mentor_id
+        - assessment
+        - commentary
     LigaSecurityRequests:
       type: object
       properties:
@@ -1949,7 +2113,7 @@ components:
         - id
         - traineeship_id
       x-stoplight:
-        id: yece66j8hcs3b
+        id: dk7z43zf0llfe
     LigaSecurityResponses:
       type: object
       properties:
@@ -1971,7 +2135,7 @@ components:
         - traineeship_id
         - status
       x-stoplight:
-        id: c6z3zc7wyy75y
+        id: eq9i34bffbgtu
     HrRequests:
       type: object
       properties:
@@ -1986,9 +2150,11 @@ components:
         - id
         - traineeship_id
       x-stoplight:
-        id: mrz4xw214e7py
-    TraineeshipsCreate:
+        id: 1qsagwkblx6tc
+    CreateTraineeship:
       type: object
+      x-stoplight:
+        id: 5uzbvfh5svfwb
       properties:
         title:
           type: string
@@ -2012,11 +2178,10 @@ components:
         - start
         - name
         - description
-        - supervisor_id
-      x-stoplight:
-        id: 5uzbvfh5svfwb
-    TraineeshipsCreateUpdate:
+    UpdateTraineeship:
       type: object
+      x-stoplight:
+        id: cxk1fbzh8qlmh
       properties:
         supervisor_id:
           type: integer
@@ -2024,15 +2189,13 @@ components:
           example: 1
       required:
         - supervisor_id
-      x-stoplight:
-        id: cxk1fbzh8qlmh
     CustomUserCreate:
       type: object
       properties:
         id:
           type: integer
           readOnly: true
-        username:
+        phone_number:
           type: string
           description: Уникальный юзернейм в виде номера телефона
           pattern: '^(7+([0-9]){10})$'
@@ -2041,7 +2204,7 @@ components:
       required:
         - username
       x-stoplight:
-        id: 5zlvhlsyx24rm
+        id: ijvtp02sy2h0o
     TokenCreate:
       type: object
       properties:
@@ -2050,7 +2213,7 @@ components:
         password:
           type: string
       x-stoplight:
-        id: 87jsushhw9gln
+        id: 29umaezrysv8q
     TokenGetResponse:
       type: object
       properties:
@@ -2064,39 +2227,26 @@ components:
           type: string
           example: bearer
       x-stoplight:
-        id: sj4h2a63eqnvi
+        id: fli1mbbtl5prj
     ValidationError:
-      description: Стандартные ошибки валидации JSF
+      description: Стандартные ошибки валидации
       type: object
       properties:
-        username:
+        fields:
           description: 'Название поля, в котором произошли ошибки. Таких полей может быть несколько'
           example:
-            - Обязательное поле.
+            - Поле phone_number обязательное
+            - 'Поле phone_number не соответствует pattern \^(7+([0-9]){10})$\z'
+            - 'Поле firstName не соответствует pattern \A[а-яА-Я]\z'
+            - При установке флага someFlat=true поле someField должно быть задано
+            - 'Убедитесь, что значение поля assessment больше либо равно 1'
+            - Описание ошибки
           type: array
           items:
             type: string
+            description: Описание ошибки
       x-stoplight:
-        id: 66ex15hxidak9
-    NestedValidationError:
-      description: Стандартные ошибки валидации JSF
-      type: object
-      properties:
-        assessment:
-          description: Ошибка оценки.
-          example: 'Убедитесь, что это значение больше либо равно 1.'
-          type: string
-      x-stoplight:
-        id: bfxuy4tzezvl0
-    SelfMadeError:
-      description: Ошибка
-      type: object
-      properties:
-        errors:
-          description: Описание ошибки
-          type: string
-      x-stoplight:
-        id: mkoi8ujjsyymy
+        id: 8k774dh1pc81a
     AuthenticationError:
       description: Пользователь не авторизован
       type: object
@@ -2106,7 +2256,7 @@ components:
           example: Учетные данные не были предоставлены.
           type: string
       x-stoplight:
-        id: 8t70pzu49aole
+        id: bgw7dcz6udens
     PermissionDenied:
       description: Недостаточно прав
       type: object
@@ -2116,7 +2266,7 @@ components:
           example: У вас недостаточно прав для выполнения данного действия.
           type: string
       x-stoplight:
-        id: 5l7lujckx4q0o
+        id: 1y768t0mgkf5w
     NotFound:
       description: Объект не найден
       type: object
@@ -2126,7 +2276,7 @@ components:
           example: Страница не найдена.
           type: string
       x-stoplight:
-        id: o3wr7ilpq86z5
+        id: heubpnpj4eoit
     ConflictError:
       description: Данный ресурс уже существует
       type: object
@@ -2136,10 +2286,21 @@ components:
           example: Вы уже отправляли запрос.
           type: string
       x-stoplight:
-        id: 1wwsxrj6noytq
+        id: w0tr5mktt0e9s
+    InternalServerError:
+      title: InternalServerError
+      description: Внутренняя ошибка сервера
+      x-stoplight:
+        id: mw3qmhjk3bs6x
+      type: object
+      properties:
+        detail:
+          description: Описание ошибки
+          example: 'Внутри сервера что-то не так, и он не может обработать запрос пользователя.'
+          type: string
   responses:
     ValidationError:
-      description: Ошибки валидации в стандартном формате JSF
+      description: Ошибки валидации в стандартном формате
       content:
         application/json:
           schema:
@@ -2150,29 +2311,6 @@ components:
         application/json:
           schema:
             $ref: '#/components/schemas/ConflictError'
-    AnnouncementsValidationError:
-      description: Данный запрос не может быть обработан
-      content:
-        application/json:
-          schema:
-            description: Стандартные ошибки валидации JSF
-            type: object
-            properties:
-              block:
-                description: 'Название поля, в котором произошли ошибки. Таких полей может быть несколько'
-                example:
-                  - Блок "form" с id "668483038" содержит недопустимые значения
-                type: array
-                items:
-                  type: string
-    NestedValidationError:
-      description: 'Ошибки валидации в стандартном формате JSF, в том числе с внутренними элементами.'
-      content:
-        application/json:
-          schema:
-            oneOf:
-              - $ref: '#/components/schemas/NestedValidationError'
-              - $ref: '#/components/schemas/ValidationError'
     AuthenticationError:
       description: Пользователь не авторизован
       content:
@@ -2191,6 +2329,12 @@ components:
         application/json:
           schema:
             $ref: '#/components/schemas/NotFound'
+    InternalServerError:
+      description: 'Сервер столкнулся с неожиданной ошибкой, которая помешала ему выполнить запрос.'
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/InternalServerError'
   securitySchemes:
     Token:
       description: 'Авторизация по токену. <br> Все запросы от имени пользователя должны выполняться с заголовком "Authorization: Token TOKENVALUE"'
