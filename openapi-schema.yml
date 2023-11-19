@@ -1,6 +1,4 @@
 openapi: 3.0.0
-x-stoplight:
-  id: 3lv3j504vs43f
 info:
   title: Traineeship system
   version: 1.0.0
@@ -235,7 +233,7 @@ paths:
                     status_from_SS:
                       status: NONE
                       description: None
-          description: ''
+          description: Статус кандидата успешно обновлен
         '401':
           $ref: '#/components/responses/AuthenticationError'
         '404':
@@ -1085,7 +1083,7 @@ paths:
                 allOf:
                   - $ref: '#/components/schemas/HomeworkDecisions'
                   - $ref: '#/components/schemas/UpdateHomeworkDecision'
-          description: Лекция успешно обновлена
+          description: Оценка ДЗ стажера успешно добавлена
         '400':
           description: Ошибки валидации в стандартном формате
           content:
@@ -1110,16 +1108,16 @@ paths:
         - Домашние задания
   /api/traineeships/liga-security:
     get:
-      summary: Обновить статус кандидата
+      summary: 'Запросить кандидатов, проверенных в СБ'
       operationId: Запросить статусы
       security:
         - Token: []
-      description: Получить статусы проверки кандидатов в СБ. Доступно только администратору.
+      description: Получить статусы проверки кандидатов в СБ. Доступно только администратору. Необходимо для принятия окончательного решения.
       parameters:
-        - name: id
+        - name: traineeship_id
           in: query
-          required: true
-          description: Уникальный идентификатор кандидата.
+          required: false
+          description: Уникальный идентификатор стажировки для фильтрации.
           schema:
             type: string
       responses:
@@ -1128,7 +1126,33 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/LigaSecurityResponses'
+                $ref: '#/components/schemas/FormDecisionList'
+              examples:
+                Example 1:
+                  value:
+                    count: 100
+                    results:
+                      - info:
+                          id: 0
+                          phone_number: '79000000000'
+                          first_name: Вася
+                          last_name: Пупкин
+                          middle_name: Алибабаевич
+                          address: string
+                          birthday: '2009-06-06'
+                          email: user@example.com
+                        tasks:
+                          - id: 0
+                            username: string
+                            traineeship_id: 0
+                            question_id: 0
+                            answer_text/link: 'https://docs.google.com/document/u/0/'
+                        status_from_supervisor:
+                          status: APPROVED
+                          description: Все отлично!
+                        status_from_SS:
+                          status: REJECTED
+                          description: Отклонен
         '401':
           $ref: '#/components/responses/AuthenticationError'
         '403':
@@ -1154,9 +1178,33 @@ paths:
           content:
             application/json:
               schema:
-                type: string
-                example: Кандидат отправлен на рассмотрение в СБ...
-                description: Ответ от сервера
+                $ref: '#/components/schemas/FormDecisionList'
+              examples:
+                Example 1:
+                  value:
+                    count: 100
+                    results:
+                      - info:
+                          id: 0
+                          phone_number: '79000000000'
+                          first_name: Вася
+                          last_name: Пупкин
+                          middle_name: Алибабаевич
+                          address: string
+                          birthday: '2009-06-06'
+                          email: user@example.com
+                        tasks:
+                          - id: 0
+                            username: string
+                            traineeship_id: 0
+                            question_id: 0
+                            answer_text/link: 'https://docs.google.com/document/u/0/'
+                        status_from_supervisor:
+                          status: APPROVED
+                          description: Все отлично!
+                        status_from_SS:
+                          status: PENDING
+                          description: На проверке .....
           description: Информация о кандидате успешно отправлена в СБ
         '400':
           description: 'Ошибка отправки (Например, когда информация о кандидате уже отправлена в СБ)'
@@ -1292,7 +1340,7 @@ paths:
                 allOf:
                   - $ref: '#/components/schemas/CreateTraineeship'
                   - $ref: '#/components/schemas/UpdateTraineeship'
-          description: Стажировка успешно создана
+          description: Руководитель стажировки успешно добавлен
         '400':
           description: 'Ошибка назначения (Например, если id руководителя не существует)'
           content:
@@ -1318,7 +1366,7 @@ paths:
     get:
       summary: Скачать программу стажировки
       operationId: Скачать программу
-      description: 'Скачать файл с программой стажировки. Это может быть TXT/PDF/CSV. Важно, чтобы контент файла удовлетворял требованиям задания. Доступно стажерам, менторам, руководителю стажировки и админам.'
+      description: 'Скачать файл с программой стажировки. Это может быть TXT/PDF/CSV. Доступно стажерам, менторам, руководителю стажировки и админам.'
       security:
         - Token: []
       parameters:
@@ -1336,7 +1384,7 @@ paths:
             type: string
       responses:
         '200':
-          description: ''
+          description: Файл скачен
           content:
             application/pdf:
               schema:
@@ -1451,12 +1499,8 @@ components:
         - address
         - birthday
         - email
-      x-stoplight:
-        id: cwploezm4a2zx
     UserRoleList:
       description: Список ролей пользователя в различных стажировках
-      x-stoplight:
-        id: qcweyjbn1jnat
       type: object
       properties:
         roles:
@@ -1480,8 +1524,6 @@ components:
         - roles
     UserSearchResult:
       description: Пользователь из БД AD
-      x-stoplight:
-        id: r073yipmhqp0x
       type: object
       properties:
         id:
@@ -1511,8 +1553,6 @@ components:
         - username
     UserSearchResultList:
       type: object
-      x-stoplight:
-        id: 9awt556dl9yuq
       description: 'Список пользователей с БД, удовлетворяющих запросу'
       properties:
         count:
@@ -1549,8 +1589,6 @@ components:
                 example: 'https://docs.google.com/document/u/0/'
       required:
         - tasks
-      x-stoplight:
-        id: 5fevjeccjjwdb
     InternWithMentor:
       description: 'Дополнительная информация по стажеру, содержащая его ментора для конкретной стажировки'
       type: object
@@ -1574,8 +1612,6 @@ components:
         - mentor_id
     InternWithMentorList:
       description: 'Список всех менторов стажера, сгруппированных по его стажировкам (подгружать эту информацию как lazy load)'
-      x-stoplight:
-        id: dit0womviu4k4
       type: object
       properties:
         mentors:
@@ -1587,8 +1623,6 @@ components:
         - username
     TemplatePreviewList:
       type: object
-      x-stoplight:
-        id: 3al2xw7dofl3m
       description: Предпросмотр шаблонов для выбора
       properties:
         count:
@@ -1636,13 +1670,9 @@ components:
       required:
         - count
         - template
-      x-stoplight:
-        id: s1iz093gq653d
     CreateProject:
       type: object
       description: 'Модель для создания проекта (например, анонса) по готовым дизайн блокам из библиотеки. Блок - обложка, заголовок, текстовый блок, изображение и так далее'
-      x-stoplight:
-        id: v3xsexsmb92ku
       properties:
         template_id:
           type: integer
@@ -1685,21 +1715,6 @@ components:
         - template_id
         - title
         - blocks
-      x-examples:
-        Example 1:
-          template_id: 0
-          title: Стажировка по системной аналитике
-          blocks:
-            - 'sorts[0]':
-                block_id: '668483038'
-                changes:
-                  - only_this_field: title
-                    element_info: Новый заголовок формы
-            - 'sorts[1]':
-                block_id: '668482970'
-                changes:
-                  - only_this_field: li_title_1
-                    element_info: E-mail
     AnnouncementsResponseOnCreate:
       type: object
       description: Ответ сервера при создании анонса
@@ -1720,8 +1735,6 @@ components:
         - project_id
         - link
         - publish_onepage
-      x-stoplight:
-        id: 312hxmdgtkvoa
     CreateLecture:
       description: 'Объект, содержащий информацию для создания лекции'
       type: object
@@ -1740,8 +1753,6 @@ components:
         - date_lecture
     LectureMinified:
       type: object
-      x-stoplight:
-        id: 1gzlfemeqngmh
       description: Первичная краткая информация о лекции (сразу после её создания)
       properties:
         id:
@@ -1762,8 +1773,6 @@ components:
         - date_lecture
     Lecture:
       type: object
-      x-stoplight:
-        id: in07zip1m3uv0
       description: 'Полная информация о лекции, содержащая название, дату проведения, ссылку на презентацию и запись.'
       properties:
         id:
@@ -1837,12 +1846,8 @@ components:
         - link_presentation
         - link_record
         - homework_id
-      x-stoplight:
-        id: 5g84xaxtfdnab
     Homework:
       type: object
-      x-stoplight:
-        id: rvczzu20vldkq
       description: Информация о домашнем задании
       properties:
         id:
@@ -1871,8 +1876,6 @@ components:
         - condition
     HomeworksWithLecture:
       type: object
-      x-stoplight:
-        id: th9fpte9bdx9m
       description: Список домашних задач для данной лекции
       properties:
         count:
@@ -1902,8 +1905,6 @@ components:
         - homeworks
     CreateHomeworks:
       type: object
-      x-stoplight:
-        id: likgdjb1m8zzi
       description: Создание ДЗ
       properties:
         id:
@@ -1968,12 +1969,8 @@ components:
         - traineeship_id
         - homework_id
         - link
-      x-stoplight:
-        id: 2cff87rfdx3dl
     FormDecision:
       type: object
-      x-stoplight:
-        id: kk0zd3tekydnx
       description: 'Вся информация о кандидате, включая его решения вступительных задач, предоставляется для принятия решений руководителем стажировки и администратором'
       properties:
         info:
@@ -2007,25 +2004,7 @@ components:
         status_from_supervisor:
           $ref: '#/components/schemas/FormDecisionUpdate'
         status_from_SS:
-          type: object
-          description: Результаты проверки кандидата руководителем стажировки
-          properties:
-            status:
-              type: string
-              description: Статус проверки кандидата от службы безопасности
-              example: NONE
-              enum:
-                - APPROVED
-                - REJECTED
-                - PENDING
-                - NONE
-            description:
-              type: string
-              description: Комментарий от СБ
-              example: None
-          required:
-            - status
-            - description
+          $ref: '#/components/schemas/LigaSecurityResponses'
       required:
         - info
         - tasks
@@ -2033,8 +2012,6 @@ components:
         - status_from_SS
     FormDecisionUpdate:
       type: object
-      x-stoplight:
-        id: t4gsh6pg7zykq
       description: Добавить результат проверки кандидата руководителем стажировки
       properties:
         status:
@@ -2055,8 +2032,6 @@ components:
         - description
     FormDecisionList:
       type: object
-      x-stoplight:
-        id: kvofk07h0kira
       description: Список кандидатов на стажировку
       properties:
         count:
@@ -2073,8 +2048,6 @@ components:
         - results
     CreateHomeworkDecision:
       type: object
-      x-stoplight:
-        id: etpxe2h9qjwb7
       description: Добавить решение ДЗ
       properties:
         username:
@@ -2092,8 +2065,6 @@ components:
     UpdateHomeworkDecision:
       type: object
       description: 'Ментор обновляет информацию в домашнем задании стажера, отправляя оценку и комментарий.'
-      x-stoplight:
-        id: h2fwug6nfg0al
       properties:
         mentor_id:
           type: integer
@@ -2125,31 +2096,26 @@ components:
       required:
         - username
         - traineeship_id
-      x-stoplight:
-        id: dk7z43zf0llfe
     LigaSecurityResponses:
       type: object
-      description: Результат проверки стажера в СБ
+      description: Схема данных от СБ
       properties:
-        id:
-          type: integer
-          description: Уникальный идентификатор кандидата
-        traineeship_id:
-          type: integer
-          description: Уникальный идентификатор стажировки
         status:
           type: string
-          description: Cтатус проверки
-          example: Проверка пройдена успешно
+          description: Статус проверки кандидата от службы безопасности
+          example: NONE
+          enum:
+            - APPROVED
+            - REJECTED
+            - PENDING
+            - NONE
         description:
           type: string
           description: Комментарий от СБ
+          example: None
       required:
-        - id
-        - traineeship_id
         - status
-      x-stoplight:
-        id: eq9i34bffbgtu
+        - description
     HrRequests:
       type: object
       description: Запрос в отдел HR на трудоустройство стажера
@@ -2164,13 +2130,9 @@ components:
       required:
         - username
         - traineeship_id
-      x-stoplight:
-        id: 1qsagwkblx6tc
     CreateTraineeship:
       type: object
       description: Создание стажировки
-      x-stoplight:
-        id: 5uzbvfh5svfwb
       properties:
         title:
           type: string
@@ -2196,8 +2158,6 @@ components:
     UpdateTraineeship:
       type: object
       description: Добавление руководителя стажировки
-      x-stoplight:
-        id: cxk1fbzh8qlmh
       properties:
         supervisor_id:
           type: integer
@@ -2220,8 +2180,6 @@ components:
           example: '79000000000'
       required:
         - username
-      x-stoplight:
-        id: ijvtp02sy2h0o
     TokenCreate:
       description: Модель для получения токена
       type: object
@@ -2234,15 +2192,13 @@ components:
         password:
           type: string
           description: Пароль
-      x-stoplight:
-        id: 29umaezrysv8q
     TokenGetResponse:
       description: Данные для авторизации
       type: object
       properties:
         token:
           type: string
-          description: Токен, который нам нужно будет отправлять в шапке каждого запроса, для получения данных в ответ
+          description: 'Токен, который нам нужно будет отправлять в шапке каждого запроса, для получения данных в ответ'
           example: token
         expires_in:
           type: integer
@@ -2252,8 +2208,6 @@ components:
           type: string
           description: Тип токена
           example: bearer
-      x-stoplight:
-        id: fli1mbbtl5prj
     ValidationError:
       description: Стандартные ошибки валидации
       type: object
@@ -2271,8 +2225,6 @@ components:
           items:
             type: string
             description: Описание ошибки
-      x-stoplight:
-        id: 8k774dh1pc81a
     AuthenticationError:
       description: Пользователь не авторизован
       type: object
@@ -2281,8 +2233,6 @@ components:
           description: Описание ошибки
           example: Учетные данные не были предоставлены.
           type: string
-      x-stoplight:
-        id: bgw7dcz6udens
     PermissionDenied:
       description: Недостаточно прав
       type: object
@@ -2291,8 +2241,6 @@ components:
           description: Описание ошибки
           example: У вас недостаточно прав для выполнения данного действия.
           type: string
-      x-stoplight:
-        id: 1y768t0mgkf5w
     NotFound:
       description: Объект не найден
       type: object
@@ -2301,8 +2249,6 @@ components:
           description: Описание ошибки
           example: Страница не найдена.
           type: string
-      x-stoplight:
-        id: heubpnpj4eoit
     ConflictError:
       description: Данный ресурс уже существует
       type: object
@@ -2311,13 +2257,9 @@ components:
           description: Описание ошибки
           example: Вы уже отправляли запрос.
           type: string
-      x-stoplight:
-        id: w0tr5mktt0e9s
     InternalServerError:
       title: InternalServerError
       description: Внутренняя ошибка сервера
-      x-stoplight:
-        id: mw3qmhjk3bs6x
       type: object
       properties:
         detail:
