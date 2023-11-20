@@ -1378,7 +1378,7 @@ paths:
             type: string
       responses:
         '200':
-          description: Уникальный идентификатор стажировки.
+          description: Список стажеров для формирования отчетности получен
           content:
             application/json:
               schema:
