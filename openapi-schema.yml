@@ -314,7 +314,7 @@ paths:
                 allOf:
                   - $ref: '#/components/schemas/UserInfo'
                   - $ref: '#/components/schemas/UserRoleList'
-          description: Подписка успешно создана
+          description: Роль пользователя успешно добавлена в БД
         '400':
           description: 'Ошибка назначения роли (Например, если роль уже назначена)'
           content:
@@ -359,7 +359,7 @@ paths:
                   - $ref: '#/components/schemas/UserInfo'
                   - $ref: '#/components/schemas/UserRoleList'
                   - $ref: '#/components/schemas/InternWithMentorList'
-          description: Подписка успешно создана
+          description: Курирующий стажера ментор успешно добавлен в БД
         '400':
           description: 'Ошибка назначения ментора (Например, если стажеру для данной стажировки уже назначен ментор)'
           content:
