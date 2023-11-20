@@ -1362,6 +1362,93 @@ paths:
           $ref: '#/components/responses/InternalServerError'
       tags:
         - Стажировка
+  '/api/traineeships/{traineeship_id}/results':
+    get:
+      summary: Получение списка стажеров для стажировки traineeship_id
+      operationId: Получить список
+      description: 'В списке стажеров руководитель стажировки может ознакомиться с информацией о конкретном стажере, нажав на его карточку.'
+      security:
+        - Token: []
+      parameters:
+        - name: traineeship_id
+          in: path
+          required: true
+          description: Уникальный идентификатор стажировки.
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Уникальный идентификатор стажировки.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserSearchResultList'
+        '401':
+          $ref: '#/components/responses/AuthenticationError'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+      tags:
+        - Стажировка
+  '/api/traineeships/{traineeship_id}/results/{id}':
+    get:
+      summary: Карточка стажера
+      operationId: Карточка стажера
+      description: 'В карточке стажера руководитель стажировки может ознакомиться с историчностью выполнения домашних заданий, оценками, комментариями и обратной связью от менторов. В карточке содержится результаты прохождения стажировки'
+      security:
+        - Token: []
+      parameters:
+        - name: traineeship_id
+          in: path
+          required: true
+          description: Уникальный идентификатор стажировки.
+          schema:
+            type: string
+        - name: id
+          in: path
+          required: true
+          description: Уникальный идентификатор стажера.
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Информация о стажере для принятия решения получена.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InternCard'
+              examples:
+                Example 1:
+                  value:
+                    info:
+                      id: 0
+                      phone_number: '79000000000'
+                      first_name: Вася
+                      last_name: Пупкин
+                      middle_name: Алибабаевич
+                      address: string
+                      birthday: '2009-06-06'
+                      email: user@example.com
+                    homeworks:
+                      - id: 0
+                        username: string
+                        traineeship_id: 0
+                        homework_id: 0
+                        link: 'https://docs.google.com/document/u/0/'
+                        mentor_id: 0
+                        assessment: 90
+                        commentary: Отлично!
+                    mentor_id: 0
+                    final_feedback: Рекомендую на трудоустройство
+        '401':
+          $ref: '#/components/responses/AuthenticationError'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+      tags:
+        - Стажировка
   '/api/traineeships/{traineeship_id}/programs/{id}':
     get:
       summary: Скачать программу стажировки
@@ -2082,6 +2169,31 @@ components:
         - mentor_id
         - assessment
         - commentary
+    InternCard:
+      type: object
+      description: Страница со всей основной информацией о стажере
+      properties:
+        info:
+          $ref: '#/components/schemas/UserInfo'
+        homeworks:
+          description: 'Историчность выполнения, оценки и комментарии к ДЗ'
+          type: array
+          items:
+            allOf:
+              - $ref: '#/components/schemas/HomeworkDecisions'
+              - $ref: '#/components/schemas/UpdateHomeworkDecision'
+        mentor_id:
+          type: integer
+          description: 'Уникальный идентификатор ментора, который курировал стажера'
+        final_feedback:
+          type: string
+          description: Финальный отзыв на стажера
+          example: Рекомендую на трудоустройство
+      required:
+        - info
+        - homeworks
+        - mentor_id
+        - final_feedback
     LigaSecurityRequests:
       type: object
       description: Проверка кандидата на стажировку в СБ
