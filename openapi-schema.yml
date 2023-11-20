@@ -1391,6 +1391,71 @@ paths:
           $ref: '#/components/responses/InternalServerError'
       tags:
         - Стажировка
+    post:
+      summary: Сформировать заключение о стажере
+      operationId: Создание заключение
+      description: Форма для написания заключения о своем стажере. Доступно только ментору
+      security:
+        - Token: []
+      parameters: []
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateResults'
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InternCard'
+              examples:
+                Example 1:
+                  value:
+                    info:
+                      id: 0
+                      phone_number: '79000000000'
+                      first_name: Вася
+                      last_name: Пупкин
+                      middle_name: Алибабаевич
+                      address: string
+                      birthday: '2009-06-06'
+                      email: user@example.com
+                    homeworks:
+                      - id: 0
+                        username: string
+                        traineeship_id: 0
+                        homework_id: 0
+                        link: 'https://docs.google.com/document/u/0/'
+                        mentor_id: 0
+                        assessment: 90
+                        commentary: Отлично!
+                    mentor_id: 0
+                    final_feedback: Рекомендую на трудоустройство
+          description: Заключение успешно сформировано
+        '400':
+          description: Ошибки валидации в стандартном формате
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ValidationError'
+              examples:
+                Example 1:
+                  value:
+                    fields:
+                      - 'Поле title не соответствует pattern \A[а-яА-Я]\z'
+                      - 'Поле start не соответствует pattern [0-9]{4}-(0[1-9]|1[012])-(0[1-9]|1[0-9]|2[0-9]|3[01])'
+                      - 'Убедитесь, что значение поля duration больше либо равно 1'
+        '401':
+          $ref: '#/components/responses/AuthenticationError'
+        '403':
+          $ref: '#/components/responses/PermissionDenied'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+      tags:
+        - Стажировка
   '/api/traineeships/{traineeship_id}/results/{id}':
     get:
       summary: Карточка стажера
@@ -1413,7 +1478,7 @@ paths:
             type: string
       responses:
         '200':
-          description: Информация о стажере для принятия решения получена.
+          description: Информация с результатами прохождения стажировки для принятия решения о найме получена.
           content:
             application/json:
               schema:
@@ -2192,6 +2257,24 @@ components:
       required:
         - info
         - homeworks
+        - mentor_id
+        - final_feedback
+    CreateResults:
+      type: object
+      description: Форма для написания заключения
+      properties:
+        intern_id:
+          type: integer
+          description: Уникальный идентификатор стажера
+        mentor_id:
+          type: integer
+          description: 'Уникальный идентификатор ментора, который курировал стажера'
+        final_feedback:
+          type: string
+          description: Финальный отзыв на стажера
+          example: Рекомендую на трудоустройство
+      required:
+        - intern_id
         - mentor_id
         - final_feedback
     LigaSecurityRequests:
